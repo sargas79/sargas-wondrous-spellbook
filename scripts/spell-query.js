@@ -154,6 +154,22 @@ export function getSpellSource(spell, fallback = "") {
 }
 
 /**
+ * Read a spell's slug.
+ *
+ * PF2e stamps a slug on every compendium spell, and copies it onto the owned item when
+ * a spell is added to an actor, so it is the most reliable way to recognise a sheet
+ * spell that has lost its compendium link. Falls back to an empty string rather than
+ * deriving one from the name: the caller already falls back to a name match.
+ *
+ * @param {object} spell A SpellPF2e document or raw spell source.
+ * @returns {string} Lower-cased slug, or an empty string.
+ */
+export function getSpellSlug(spell) {
+  const raw = spell?.system?.slug ?? spell?.slug ?? "";
+  return typeof raw === "string" ? raw.toLowerCase() : "";
+}
+
+/**
  * Read a spell's category slug (`spell`, `focus`, `ritual`, ...).
  * @param {object} spell A SpellPF2e document or raw spell source.
  * @returns {string} Lower-cased category slug, or an empty string.
@@ -262,6 +278,9 @@ function normaliseSpell(spell, pack) {
     // just the sources a table actually owns.
     sourceKey: sourceKey(sourceLabel),
     sourceLabel,
+    // Carried so an actor's spell can be matched back to its compendium original even
+    // when the item has lost its source id.
+    slug: getSpellSlug(spell),
     name: spell.name,
     img: spell.img,
     rank,

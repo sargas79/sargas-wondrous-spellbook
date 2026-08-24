@@ -15,12 +15,14 @@ import { injectSheetControls, openSendToSlotDialog, resolveTargetActor } from ".
 import { getAnimationsAvailable, registerAnimationHooks } from "./animation-config.js";
 import { invalidateSpellCache, listSpellSources, querySpells } from "./spell-query.js";
 import { LootGeneratorApp } from "./loot-generator-app.js";
+import { ImportApp, injectImportButton, openImport } from "./import-app.js";
 import {
   injectLootBookButton,
   openLootBook,
   registerLootBookContextMenu
 } from "./loot-book-app.js";
 import * as loot from "./loot-generator.js";
+import * as importer from "./import-spells.js";
 import * as persistence from "./persistence.js";
 
 /**
@@ -186,6 +188,9 @@ Hooks.once("init", () => {
     LootGeneratorApp,
     openLootGenerator: (options = {}) => new LootGeneratorApp(options).render(true),
     openLootBook,
+    ImportApp,
+    openImport,
+    ...importer,
     ...loot,
     ...persistence
   };
@@ -242,5 +247,13 @@ Hooks.on("renderCharacterSheetPF2e", (app, html) => {
     injectSheetControls(app, html);
   } catch (err) {
     console.error(`${MODULE_ID} | Character sheet integration failed`, err);
+  }
+
+  // Kept in its own try block: the import button does not depend on JB2A or Sequencer,
+  // so an animation failure above must not take it down with it.
+  try {
+    injectImportButton(app, html);
+  } catch (err) {
+    console.error(`${MODULE_ID} | Spellbook import button injection failed`, err);
   }
 });

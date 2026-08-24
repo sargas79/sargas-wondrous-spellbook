@@ -1228,3 +1228,122 @@
   font-size: 10px;
   font-variant-numeric: tabular-nums;
 }
+
+/* -------------------------------------------------- *
+ * Character sheet import
+ * -------------------------------------------------- */
+
+.bws-import-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.bws-import-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 10px;
+  padding: 10px 12px;
+  background: var(--bws-bg-raised);
+  border-bottom: 1px solid var(--bws-border);
+  flex: 0 0 auto;
+}
+
+.bws-import-form .bws-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.bws-import-form select,
+.bws-import-form input[type="text"] { width: 100%; }
+
+.bws-import-status {
+  align-items: center;
+  border-bottom: 1px solid var(--bws-border-soft);
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 6px 12px;
+}
+
+.bws-import-summary {
+  color: var(--bws-text-muted);
+  font-size: 11px;
+}
+
+.bws-import-bulk {
+  display: flex;
+  gap: 6px;
+}
+
+.bws-import-note {
+  align-items: baseline;
+  border-bottom: 1px solid var(--bws-border-soft);
+  color: var(--bws-text-dim);
+  display: flex;
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  gap: 6px;
+  line-height: 1.45;
+  margin: 0;
+  padding: 6px 12px;
+}
+
+.bws-import-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+/* The shared group header spreads its children apart; here the entry name and its kind
+   belong together, with only the count pushed to the far edge. */
+.bws-import-group {
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+.bws-import-group [data-group-count] { margin-left: auto; }
+
+/* The entry name doubles as the "tick this whole entry" control, so the checkbox sits
+   inside the group header rather than beside it. */
+.bws-import-group-check {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.bws-import-group-check .bws-group-title { cursor: pointer; }
+
+/* Rows are labels here: the whole row is the checkbox's hit area, since this list has
+   no per-row buttons competing for the click. */
+.bws-import-row {
+  cursor: pointer;
+  grid-template-columns: 26px auto minmax(0, 1fr) auto;
+}
+
+.bws-pill-unlinked {
+  border-color: rgba(224, 182, 74, 0.45);
+  color: #e0b64a;
+}
+
+.bws-import-footer {
+  background: var(--bws-bg-raised);
+  border-top: 1px solid var(--bws-border);
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.bws-import-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}

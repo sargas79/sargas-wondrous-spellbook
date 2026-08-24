@@ -18,6 +18,10 @@ in this module's windows.
   a book; save the book as a Journal Entry.
 - **My Spellbooks** — an ownership-filtered browser. GMs see every spellbook; players see only
   the ones they own.
+- **Import from a character sheet** — read the spells a character already has and store
+  them as a spellbook, either as a new book or merged into an existing one. Each spell is
+  matched back to its compendium original, so the book keeps working after that character
+  is gone.
 - **Send to Slot** — the one write path from a spellbook to an actor. Pick a spellcasting entry
   and a rank; the spell is created as an embedded item bound to that entry, so it appears in the
   sheet's own spellcasting tab.
@@ -82,6 +86,30 @@ open slot; spontaneous and innate entries just receive the spell.
 
 If the actor has no spellcasting entries, the dialog says so rather than offering an empty
 dropdown.
+
+### Importing a character's spells
+
+*My Spellbooks* has an **Import** button, and every PF2e character sheet you own grows a
+small import icon in its window header. Either opens the importer on that character.
+
+The window lists the sheet's spells grouped by spellcasting entry, everything ticked to
+start with. Untick what you don't want, tick an entry's name to take or drop the whole
+entry, then either create a new book or pick an existing one from **Import into** to merge
+into it. Merging appends only what the book does not already hold, so importing the same
+sheet twice adds nothing the second time.
+
+**Nothing is written to the character.** The importer only reads the sheet and writes a
+Journal Entry.
+
+An owned spell is a copy rather than a reference, so each row is matched back to its
+compendium original — by source id, then slug, then name. A spell that matches nothing (a
+homebrew spell that lives only on that sheet) is marked **Unlinked**: it is still importable,
+but the book points at that character's own copy and stops resolving if the character is
+deleted. Rituals are left out, since a spellbook exists to fill spell slots and a ritual
+never occupies one. Both cases are counted in a note above the list.
+
+Any animation you have configured on a sheet's spell rides along into the book, so sending
+that spell to another character carries the effect with it.
 
 ### Rolling a spellbook as treasure
 
@@ -168,6 +196,11 @@ api.sendToSlot({ uuid: "Compendium....." }); // open the Send to Slot dialog
 api.getUserSpellbooks();                    // JournalEntry[] the current user may see
 api.getAnimationsAvailable();               // boolean, re-evaluated live
 
+api.openImport();                           // open the character sheet importer
+api.openImport({ actor });                  // ...on a particular actor
+api.collectActorSpells(actor);              // -> { groups, total, unlinked, rituals }
+api.importIntoSpellbook({ spells, name });  // write records to a new or existing book
+
 api.listSpellSources();                     // [{ key, label, count }] of every source
 api.openLootGenerator();                    // open the loot roller (GM)
 api.generateLootSpellbook({ level: 7 });    // headless roll -> { spells, meta, name }
@@ -203,6 +236,8 @@ scripts/
   spellbook-app.js               Spellbook Creator (ApplicationV2)
   my-spellbooks-app.js           My Spellbooks browser (ApplicationV2)
   slot-manager.js                Send to Slot dialog, character sheet injection
+  import-spells.js               Sheet reading, compendium matching, book merging
+  import-app.js                  Import from Character Sheet (ApplicationV2)
   loot-generator.js              Seeded random book rolling, pricing, Item creation
   loot-generator-app.js          Loot Spellbook Generator (GM, ApplicationV2)
   loot-book-app.js               Loot book reader, learn flow, item sheet injection
@@ -221,6 +256,11 @@ back to raw source paths, so the module tolerates data-model changes across PF2e
 Similarly, `slot-manager.js` prefers PF2e's own `SpellcastingEntryPF2e#addSpell` and
 `#prepareSpell` helpers and only falls back to a manual `Item.create` + `system.location` write
 if those are unavailable.
+
+The importer reads a sheet spell's origin from `_stats.compendiumSource` and from the older
+`flags.core.sourceId`, and falls back to matching on PF2e's `system.slug` and then on the
+spell name, so a spell keeps its compendium link across both Foundry's move of that field and
+a compendium being renamed or replaced.
 
 The spell-cast signal has moved between PF2e releases. The module listens on `pf2e.castSpell`
 and additionally on `createChatMessage` (reading the cast card's origin flags) as a

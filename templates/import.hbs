@@ -1,0 +1,113 @@
+{{!-- Read-only view of a character's spells. Ticked rows are written into a spellbook;
+      nothing here ever writes back to the actor. --}}
+<div class="bws-import-inner">
+
+  <div class="bws-import-form">
+    <div class="bws-field">
+      <label for="bws-import-actor">{{localize "BWS.Import.ActorLabel"}}</label>
+      <select id="bws-import-actor" name="actor" {{#unless hasActor}}disabled{{/unless}}>
+        {{#each actors}}
+          <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+        {{/each}}
+      </select>
+    </div>
+
+    <div class="bws-field">
+      <label for="bws-import-target">{{localize "BWS.Import.TargetLabel"}}</label>
+      <select id="bws-import-target" name="target">
+        {{#each targets}}
+          <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+        {{/each}}
+      </select>
+    </div>
+
+    <div class="bws-field">
+      <label for="bws-import-name">{{localize "BWS.Creator.NameLabel"}}</label>
+      <input id="bws-import-name" type="text" name="bookName" value="{{bookName}}"
+             placeholder="{{localize 'BWS.Creator.NamePlaceholder'}}"
+             {{#if nameDisabled}}disabled{{/if}} />
+    </div>
+  </div>
+
+  <div class="bws-import-status">
+    <span class="bws-import-summary">{{summaryLine}}</span>
+    <span class="bws-import-bulk">
+      <button type="button" class="bws-button bws-button-small" data-action="selectAll">
+        {{localize "BWS.Loot.SourcesAllButton"}}
+      </button>
+      <button type="button" class="bws-button bws-button-small" data-action="selectNone">
+        {{localize "BWS.Loot.SourcesNoneButton"}}
+      </button>
+    </span>
+  </div>
+
+  {{#if noteLine}}
+    <p class="bws-import-note">
+      <i class="fa-solid fa-circle-info"></i> {{noteLine}}
+    </p>
+  {{/if}}
+
+  <div class="bws-import-list">
+    {{#if hasSpells}}
+      {{#each groups}}
+        <div class="bws-group-header bws-import-group">
+          <label class="bws-checkbox bws-import-group-check">
+            <input type="checkbox" data-group="{{id}}" />
+            <span class="bws-group-title">{{name}}</span>
+          </label>
+          {{#if kind}}<span class="bws-pill">{{kind}}</span>{{/if}}
+          <span class="bws-group-count" data-group-count="{{id}}">
+            {{localize "BWS.Import.GroupCount" selected=selectedCount total=spells.length}}
+          </span>
+        </div>
+
+        {{#each spells}}
+          <label class="bws-spell-row bws-import-row">
+            <span class="bws-row-check">
+              <input type="checkbox" data-item-id="{{itemId}}" data-group-id="{{../id}}"
+                     {{#if selected}}checked{{/if}} />
+            </span>
+            <span class="bws-rank-badge">{{rankBadge}}</span>
+            <span class="bws-spell-name" title="{{name}}">{{name}}</span>
+            <span class="bws-traditions">
+              {{#each traditionTags}}<span class="bws-pill bws-pill-{{key}}">{{label}}</span>{{/each}}
+              {{#if isFocus}}<span class="bws-pill bws-pill-focus">{{localize "BWS.Rank.Focus"}}</span>{{/if}}
+              {{#unless linked}}
+                <span class="bws-pill bws-pill-unlinked"
+                      data-tooltip="{{localize 'BWS.Import.UnlinkedTooltip'}}">
+                  {{localize "BWS.Import.Unlinked"}}
+                </span>
+              {{/unless}}
+            </span>
+          </label>
+        {{/each}}
+      {{/each}}
+    {{else}}
+      <div class="bws-empty">
+        <i class="fa-solid fa-hat-wizard"></i>
+        {{#if hasActor}}
+          <p class="bws-empty-title">{{localize "BWS.Import.Empty"}}</p>
+          <p class="bws-empty-hint">{{localize "BWS.Import.EmptyHint"}}</p>
+        {{else}}
+          <p class="bws-empty-title">{{localize "BWS.Import.NoActors"}}</p>
+        {{/if}}
+      </div>
+    {{/if}}
+  </div>
+
+  <footer class="bws-import-footer">
+    <p class="bws-ownership-note">
+      <i class="fa-solid fa-shield-halved"></i>
+      {{localize "BWS.Import.ReadOnlyNote"}}
+    </p>
+
+    <div class="bws-import-actions">
+      <button type="button" class="bws-button bws-button-primary" data-action="import"
+              {{#unless canImport}}disabled{{/unless}}>
+        <i class="fa-solid fa-file-import"></i> {{importLabel}}
+      </button>
+      <button type="button" class="bws-button" data-action="cancel">{{localize "BWS.Creator.Cancel"}}</button>
+    </div>
+  </footer>
+
+</div>

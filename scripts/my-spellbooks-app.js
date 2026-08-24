@@ -10,6 +10,7 @@ import { MODULE_ID, template } from "./constants.js";
 import { deleteSpellbook, getFolderName, getUserSpellbooks, summariseSpellbook } from "./persistence.js";
 import { SpellbookApp } from "./spellbook-app.js";
 import { LootGeneratorApp } from "./loot-generator-app.js";
+import { openImport } from "./import-app.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -27,6 +28,7 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
     position: { width: 460, height: 520 },
     actions: {
       create: MySpellbooksApp.#onCreate,
+      importSheet: MySpellbooksApp.#onImportSheet,
       rollLoot: MySpellbooksApp.#onRollLoot,
       open: MySpellbooksApp.#onOpen,
       edit: MySpellbooksApp.#onEdit,
@@ -59,6 +61,11 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
   /** Open a blank creator window. */
   static async #onCreate() {
     new SpellbookApp().render(true);
+  }
+
+  /** Build a spellbook out of a character's existing spells. */
+  static async #onImportSheet() {
+    openImport();
   }
 
   /** Open the random loot spellbook generator. */
