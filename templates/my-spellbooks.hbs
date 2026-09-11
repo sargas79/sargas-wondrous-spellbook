@@ -1,4 +1,7 @@
-{{!-- Ownership-filtered list of spellbooks. GMs see every book; players see their own. --}}
+{{!-- Ownership-filtered list of spellbooks, ritual books, formula books and rolled loot
+      books. GMs see every book; players see their own. Each row carries its `kind` so the
+      handlers know which document collection to look in, and a journal row also carries
+      `bookKind` for what it holds. --}}
 <div class="bws-browser-inner">
 
   <header class="bws-browser-header">
@@ -28,11 +31,19 @@
         <div class="bws-book-row">
           <div class="bws-book-main">
             <span class="bws-book-name" title="{{name}}">
-              <i class="{{kindIcon}} bws-book-kind-icon" data-tooltip="{{kindLabel}}"></i>
+              {{!-- Journal rows only: a loot book is tagged by the dice pill below. --}}
+              {{#if kindIcon}}
+                <i class="{{kindIcon}} bws-book-kind-icon" data-tooltip="{{kindLabel}}"></i>
+              {{/if}}
               {{name}}
             </span>
             <span class="bws-book-meta">
               {{countLabel}}
+              {{#if lootLabel}}
+                <span class="bws-loot-tag">
+                  <i class="fa-solid fa-dice-d20"></i> {{lootLabel}}
+                </span>
+              {{/if}}
               {{#unless canEdit}}
                 <span class="bws-readonly-tag">
                   <i class="fa-solid fa-lock"></i> {{localize "BWS.Browser.ReadOnly"}}
@@ -47,28 +58,28 @@
           </div>
 
           <div class="bws-book-controls">
-            <button type="button" class="bws-icon-button" data-action="open" data-id="{{id}}"
-                    data-tooltip="{{localize 'BWS.Browser.Open'}}"
-                    aria-label="{{localize 'BWS.Browser.Open'}}">
+            <button type="button" class="bws-icon-button" data-action="open" data-id="{{id}}" data-kind="{{kind}}"
+                    data-tooltip="{{openHint}}" aria-label="{{openHint}}">
               <i class="fa-solid fa-book-open"></i>
             </button>
+            {{!-- A formula book is read, not edited: its control opens the crafter's
+                  reader, and stays enabled for a book you only have read access to,
+                  because teaching writes to the crafter rather than to the book. --}}
             {{#if isFormulas}}
-              <button type="button" class="bws-icon-button" data-action="edit" data-id="{{id}}"
+              <button type="button" class="bws-icon-button" data-action="edit" data-id="{{id}}" data-kind="{{kind}}"
                       data-tooltip="{{localize 'BWS.Formula.OpenBook'}}"
                       aria-label="{{localize 'BWS.Formula.OpenBook'}}">
                 <i class="fa-solid fa-hammer"></i>
               </button>
             {{else}}
-              <button type="button" class="bws-icon-button" data-action="edit" data-id="{{id}}"
-                      data-tooltip="{{localize 'BWS.Browser.Edit'}}"
-                      aria-label="{{localize 'BWS.Browser.Edit'}}"
+              <button type="button" class="bws-icon-button" data-action="edit" data-id="{{id}}" data-kind="{{kind}}"
+                      data-tooltip="{{editHint}}" aria-label="{{editHint}}"
                       {{#unless canEdit}}disabled{{/unless}}>
                 <i class="fa-solid fa-pen-to-square"></i>
               </button>
             {{/if}}
-            <button type="button" class="bws-icon-button bws-icon-danger" data-action="remove" data-id="{{id}}"
-                    data-tooltip="{{localize 'BWS.Browser.Delete'}}"
-                    aria-label="{{localize 'BWS.Browser.Delete'}}"
+            <button type="button" class="bws-icon-button bws-icon-danger" data-action="remove" data-id="{{id}}" data-kind="{{kind}}"
+                    data-tooltip="{{deleteHint}}" aria-label="{{deleteHint}}"
                     {{#unless canEdit}}disabled{{/unless}}>
               <i class="fa-solid fa-trash"></i>
             </button>

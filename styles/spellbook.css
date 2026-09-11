@@ -331,6 +331,58 @@
   opacity: 1;
 }
 
+/* PF2e draws its own tick on a checked box as an `::after` glyph in the system's
+   orange, sized for its own control. It lands next to the box drawn above instead of
+   inside it, so a checked row showed two marks. The mark here lives on `::before`,
+   which leaves `::after` free to be removed outright.
+
+   The selectors below repeat `[type]` purely to outrank the system rules, which are a
+   class and an element deep and load after this file. */
+
+.bws .bws-checkbox input[type="checkbox"][type]::after,
+.bws .bws-checkbox input[type="radio"][type]::after,
+.bws .bws-row-check input[type="checkbox"][type]::after,
+.bws-dialog .bws-checkbox input[type="checkbox"][type]::after,
+.bws-dialog .bws-checkbox input[type="radio"][type]::after {
+  content: none;
+  display: none;
+}
+
+/* Same reason: keep the box itself square and unstyled by the system, including the
+   wide toggle track PF2e gives a checked control. */
+
+.bws .bws-checkbox input[type="checkbox"][type],
+.bws .bws-checkbox input[type="radio"][type],
+.bws .bws-row-check input[type="checkbox"][type],
+.bws-dialog .bws-checkbox input[type="checkbox"][type],
+.bws-dialog .bws-checkbox input[type="radio"][type] {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--bws-bg-inset);
+  border: 1px solid var(--bws-border);
+  border-radius: var(--bws-radius-sm);
+  box-shadow: none;
+  height: 15px;
+  width: 15px;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+}
+
+.bws .bws-checkbox input[type="radio"][type],
+.bws-dialog .bws-checkbox input[type="radio"][type] {
+  border-radius: 50%;
+}
+
+.bws .bws-checkbox input[type="checkbox"][type]:checked,
+.bws .bws-checkbox input[type="radio"][type]:checked,
+.bws .bws-row-check input[type="checkbox"][type]:checked,
+.bws-dialog .bws-checkbox input[type="checkbox"][type]:checked,
+.bws-dialog .bws-checkbox input[type="radio"][type]:checked {
+  background: var(--bws-accent);
+  border-color: var(--bws-accent);
+}
+
 /* -------------------------------------------------- *
  * Body: results list + selection panel
  * -------------------------------------------------- */
@@ -810,6 +862,14 @@
   gap: 4px;
 }
 
+/* Marks a row that is a rolled loot item rather than a spellbook journal. */
+.bws-loot-tag {
+  align-items: center;
+  color: var(--bws-accent);
+  display: inline-flex;
+  gap: 4px;
+}
+
 .bws-book-ranks {
   display: flex;
   gap: 4px;
@@ -951,25 +1011,71 @@
  * it reads as part of the sheet's own control cluster rather than an add-on.
  * -------------------------------------------------- */
 
-.bws-anim-button {
+/*
+ * This is the one control that lives inside PF2e's own markup rather than under `.bws`,
+ * so it has to defend itself against the default `button` box Foundry and the system
+ * apply: left alone it picks up a full-width, min-height button shell and stretches the
+ * row's control cluster. The box model is forced; colour and opacity stay inheritable so
+ * the button still reads as part of the sheet.
+ */
+button.bws-anim-button {
   appearance: none;
-  background: transparent;
-  border: none;
+  -webkit-appearance: none;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  background: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
   color: inherit;
   cursor: pointer;
-  flex: 0 0 auto;
+  flex: 0 0 auto !important;
+  font-family: inherit;
   font-size: 12px;
+  line-height: 1 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 3px !important;
   opacity: 0.55;
-  padding: 0 3px;
   transition: opacity 120ms ease, color 120ms ease;
 }
 
-.bws-anim-button:hover {
+/*
+ * The cluster we inject into is sized by PF2e for its own controls, and those controls
+ * shrink to make room for ours - which is what crushes the CAST button on rows that
+ * carry several controls. Let the cluster grow to fit its contents and hold every child
+ * at its natural width instead.
+ */
+.bws-anim-host {
+  display: flex !important;
+  align-items: center;
+  gap: 2px;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  flex: 0 0 auto !important;
+  grid-template-columns: none !important;
+}
+
+.bws-anim-host > * {
+  flex: 0 0 auto !important;
+}
+
+button.bws-anim-button > i {
+  margin: 0 !important;
+  line-height: 1;
+}
+
+button.bws-anim-button:hover {
   opacity: 1;
   color: var(--bws-accent, #7c6df2);
 }
 
-.bws-anim-button.is-set {
+button.bws-anim-button.is-set {
   color: #7c6df2;
   opacity: 0.95;
 }

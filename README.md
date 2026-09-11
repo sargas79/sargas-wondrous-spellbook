@@ -177,6 +177,11 @@ onto the selected token's actor. It is an ordinary `equipment` item — priced, 
 and carrying a readable spell list in its description — so it drags into loot chests and
 inventories like any other treasure.
 
+A book written into the folder is also listed in *My Spellbooks* alongside the journal
+spellbooks, tagged with its level. Opening a row there opens the reader; a GM can also
+open the item sheet or delete the book from the same row. Copies handed straight to an
+actor live on that actor's sheet and are not listed.
+
 Generation is seeded, and the seed is stored on the item. Re-entering a seed with the same
 settings rolls the same book again. Editing a book by hand marks it as edited, because it
 no longer reproduces from its seed.
@@ -184,7 +189,7 @@ no longer reproduces from its seed.
 ### Learning from a loot spellbook
 
 Open the item and click **Open spellbook** in its sheet header (or right-click it in the
-Items directory). Each spell has a **Learn** button, which opens the same *Send to Slot*
+Items directory, or open its row in *My Spellbooks*). Each spell has a **Learn** button, which opens the same *Send to Slot*
 dialog the Spellbook Creator uses — so learning goes through one write path with all its
 prepared-slot and heightening handling intact.
 

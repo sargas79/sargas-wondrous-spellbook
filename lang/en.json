@@ -103,7 +103,10 @@
   "BWS.Browser.Open": "Open journal",
   "BWS.Browser.Edit": "Edit spellbook",
   "BWS.Browser.Delete": "Delete spellbook",
+  "BWS.Browser.OpenItem": "Open item sheet",
+  "BWS.Browser.DeleteLoot": "Delete loot spellbook",
   "BWS.Browser.ReadOnly": "Read only",
+  "BWS.Browser.LootTag": "Loot, level {level}",
   "BWS.Browser.SpellSummary": "{count} spells",
   "BWS.Browser.SpellSummaryOne": "1 spell",
   "BWS.Browser.RitualSummary": "{count} rituals",
@@ -114,6 +117,7 @@
   "BWS.Browser.EmptyHint": "Create your first spellbook to collect spells from the compendiums and send them straight into a character's slots.",
   "BWS.Browser.EmptyAction": "Create a spellbook",
   "BWS.Browser.DeleteConfirm": "Delete the spellbook \"{name}\"? This cannot be undone.",
+  "BWS.Browser.DeleteLootConfirm": "Delete the loot spellbook \"{name}\"? This cannot be undone.",
   "BWS.Browser.DeleteTitle": "Delete Spellbook",
 
   "BWS.Slot.Title": "Send to Slot",

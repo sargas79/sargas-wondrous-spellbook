@@ -1,13 +1,15 @@
 /**
  * The "My Spellbooks" browser.
  *
- * Lists every book in the module's folder - spellbooks, ritual books and formula books -
- * filtered by ownership: a GM sees every book, a player sees only the ones they own.
- * Edit and delete controls are disabled per-row for anyone who lacks OWNER on that
- * specific entry.
+ * Lists every book the module knows about, filtered by ownership: a GM sees every book,
+ * a player sees only the ones they own. Edit and delete controls are disabled per-row
+ * for anyone who lacks OWNER on that specific entry.
  *
- * A row's edit control opens whatever that kind of book is edited with: the creator for
- * spells and rituals, the crafter's reader for formulas.
+ * Rows are sorted into one alphabetical list across two axes that are deliberately kept
+ * apart. `kind` is where a book is *stored* - a journal, or a rolled loot item - and is
+ * what every action handler dispatches on. `bookKind` is what a journal *holds*, and
+ * decides which window its edit control opens: the creator for spells and rituals, the
+ * crafter's reader for formulas.
  */
 
 import { BOOK_KINDS, MODULE_ID, template } from "./constants.js";
@@ -20,6 +22,8 @@ import {
 } from "./persistence.js";
 import { SpellbookApp } from "./spellbook-app.js";
 import { LootGeneratorApp } from "./loot-generator-app.js";
+import { getUserLootBooks, isLootSpellbook, summariseLootBook } from "./loot-generator.js";
+import { openLootBook } from "./loot-book-app.js";
 import { openImport } from "./import-app.js";
 import { listImportableActors } from "./import-spells.js";
 import { openFormulaBook } from "./formula-book-app.js";
@@ -55,7 +59,25 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** @inheritdoc */
   async _prepareContext(options) {
-    const books = getUserSpellbooks().map(summariseSpellbook);
+    // Journals and rolled loot items are two storage shapes for the same idea, so both
+    // are listed here; `kind` is what every action handler dispatches on.
+    const journals = getUserSpellbooks().map((journal) => ({
+      ...summariseSpellbook(journal),
+      kind: "journal",
+      openHint: game.i18n.localize("BWS.Browser.Open"),
+      editHint: game.i18n.localize("BWS.Browser.Edit"),
+      deleteHint: game.i18n.localize("BWS.Browser.Delete")
+    }));
+    const loot = getUserLootBooks().map((item) => ({
+      ...summariseLootBook(item),
+      kind: "loot",
+      openHint: game.i18n.localize("BWS.Loot.OpenBook"),
+      editHint: game.i18n.localize("BWS.Browser.OpenItem"),
+      deleteHint: game.i18n.localize("BWS.Browser.DeleteLoot")
+    }));
+    // One alphabetical list rather than two blocks: the loot tag on a row is what tells
+    // the two kinds apart, so grouping by kind would only cost the reader the ordering.
+    const books = [...journals, ...loot].sort((a, b) => a.name.localeCompare(b.name));
 
     return {
       ...(await super._prepareContext(options)),
@@ -93,19 +115,33 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
     new LootGeneratorApp().render(true);
   }
 
-  /** Open the underlying journal entry. */
+  /** Open the underlying journal entry, or a loot book's reader. */
   static async #onOpen(event, target) {
+    if (target.dataset.kind === "loot") {
+      // Guarded rather than passed straight in: a row left over from a book deleted
+      // elsewhere would otherwise be reported as "not a loot book".
+      const item = game.items.get(target.dataset.id);
+      if (item) openLootBook(item);
+      return;
+    }
     const journal = game.journal.get(target.dataset.id);
     journal?.sheet?.render(true);
   }
 
   /**
-   * Open a book with the window that suits its kind.
+   * Open a book with the window that suits it.
    *
-   * A formula book holds items rather than spells, so the spell creator would render it
-   * as nonsense; its reader is where formulas are taught to a crafter instead.
+   * Two independent questions decide that. Where the book is stored: a loot book is a
+   * physical item the creator cannot edit, so its own sheet is opened instead. And what
+   * a journal holds: a formula book holds items rather than spells, so the spell creator
+   * would render it as nonsense, and its reader is where formulas are taught to a
+   * crafter instead.
    */
   static async #onEdit(event, target) {
+    if (target.dataset.kind === "loot") {
+      game.items.get(target.dataset.id)?.sheet?.render(true);
+      return;
+    }
     const journal = game.journal.get(target.dataset.id);
     if (!journal) return;
 
@@ -113,23 +149,34 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
     else new SpellbookApp({ journal }).render(true);
   }
 
-  /** Delete a spellbook after confirmation. */
+  /** Delete a spellbook, or a loot book item, after confirmation. */
   static async #onRemove(event, target) {
-    const journal = game.journal.get(target.dataset.id);
-    if (!journal) return;
+    const isLoot = target.dataset.kind === "loot";
+    const doc = isLoot ? game.items.get(target.dataset.id) : game.journal.get(target.dataset.id);
+    if (!doc) return;
 
     const confirmed = await foundry.applications.api.DialogV2.confirm({
       window: { title: game.i18n.localize("BWS.Browser.DeleteTitle"), icon: "fa-solid fa-trash" },
       classes: ["bws-dialog"],
-      content: `<p>${game.i18n.format("BWS.Browser.DeleteConfirm", {
-        name: foundry.utils.escapeHTML(journal.name)
-      })}</p>`,
+      content: `<p>${game.i18n.format(
+        isLoot ? "BWS.Browser.DeleteLootConfirm" : "BWS.Browser.DeleteConfirm",
+        { name: foundry.utils.escapeHTML(doc.name) }
+      )}</p>`,
       rejectClose: false,
       modal: true
     });
     if (!confirmed) return;
 
-    await deleteSpellbook(journal);
+    if (isLoot) {
+      try {
+        await doc.delete();
+        ui.notifications.info(game.i18n.format("BWS.Notify.Deleted", { name: doc.name }));
+      } catch (err) {
+        console.error("Blizzard's Wondrous Spellbook | Failed to delete the loot spellbook", err);
+        ui.notifications.error(game.i18n.localize("BWS.Error.DeleteFailed"));
+      }
+    } else await deleteSpellbook(doc);
+
     await this.render();
   }
 }
@@ -149,5 +196,14 @@ export function registerBrowserRefreshHooks() {
   Hooks.on("createJournalEntry", refresh);
   Hooks.on("updateJournalEntry", refresh);
   Hooks.on("deleteJournalEntry", refresh);
+  // Loot books are Items, so the list has to follow item changes too. Compendium and
+  // actor-owned items are skipped: neither is ever listed here.
+  const refreshItem = (item) => {
+    if (item?.pack || item?.parent) return;
+    if (isLootSpellbook(item)) refresh();
+  };
+  Hooks.on("createItem", refreshItem);
+  Hooks.on("updateItem", refreshItem);
+  Hooks.on("deleteItem", refreshItem);
   Hooks.on(`${MODULE_ID}.spellbookSaved`, refresh);
 }

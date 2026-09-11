@@ -340,9 +340,31 @@ export function injectSheetControls(app, html) {
 
   for (const row of tab.querySelectorAll("[data-item-id]")) {
     const itemId = row.dataset.itemId;
+
+    // PF2e repeats `data-item-id` on elements *inside* a spell row - the drag handle,
+    // the name link, individual controls - so the same spell is visited several times.
+    // Only the outermost element carrying an id is the row; anything below it repeating
+    // that id belongs to the row rather than being a row of its own. Comparing ids (not
+    // just "has an ancestor with the attribute") keeps spell rows nested inside a
+    // spellcasting entry, which carries the entry's own id, from being skipped.
+    if (row.parentElement?.closest("[data-item-id]")?.dataset.itemId === itemId) continue;
+
     const item = actor.items.get(itemId);
     if (item?.type !== "spell") continue;
-    if (row.querySelector(".bws-anim-button")) continue;
+
+    // Prefer the row's existing control cluster so the button inherits its layout, but
+    // only a cluster belonging to *this* row - never one from a row nested inside it.
+    const controls = [...row.querySelectorAll(".item-controls, .spell-controls, .controls")].find(
+      (el) => el.closest("[data-item-id]") === row
+    );
+    const host = controls ?? row;
+    if (host.querySelector(".bws-anim-button")) continue;
+
+    // PF2e sizes the control cluster to the controls it knows about, and its own
+    // buttons shrink to absorb anything extra - a spell row with several controls
+    // squeezes the CAST button down to a sliver once ours is added. Tagging the
+    // cluster lets the stylesheet size it to its contents instead.
+    if (controls) controls.classList.add("bws-anim-host");
 
     const hasAnimation = !!item.getFlag(MODULE_ID, "jb2aAnimation");
     const button = document.createElement("button");
@@ -357,8 +379,6 @@ export function injectSheetControls(app, html) {
       openAnimationConfigDialog(actor.items.get(itemId));
     });
 
-    // Prefer the row's existing control cluster so the button inherits its layout.
-    const controls = row.querySelector(".item-controls, .spell-controls, .controls");
-    (controls ?? row).appendChild(button);
+    host.appendChild(button);
   }
 }

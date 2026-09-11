@@ -18,8 +18,8 @@ import {
   SETTINGS,
   DEFAULT_LOOT_FOLDER_NAME
 } from "./constants.js";
-import { MAX_RANK, RARITIES, TRADITIONS, loadAllSpells } from "./spell-query.js";
-import { buildOwnership, renderSpellsPage, toStoredSpell } from "./persistence.js";
+import { MAX_RANK, RARITIES, TRADITIONS, getRankBadge, loadAllSpells } from "./spell-query.js";
+import { buildOwnership, getStoredSpells, renderSpellsPage, toStoredSpell } from "./persistence.js";
 
 /** Highest character level a book can be rolled for. */
 export const MAX_LEVEL = 20;
@@ -562,4 +562,57 @@ export function getLootMeta(item) {
  */
 export function isLootSpellbook(item) {
   return !!getLootMeta(item);
+}
+
+/**
+ * List the world loot spellbooks the current user may see.
+ *
+ * Mirrors `getUserSpellbooks`: the books live in the configured Item folder, a GM sees
+ * every one of them and a player sees the ones they have at least OBSERVER on, which is
+ * what the reader needs to let them learn a spell. Copies embedded on an actor are not
+ * world items and stay on that actor's sheet.
+ *
+ * @returns {object[]} Item documents, sorted by name.
+ */
+export function getUserLootBooks() {
+  const folderName = getLootFolderName();
+  const folder = game.folders.find((f) => f.type === "Item" && f.name === folderName);
+
+  return game.items
+    .filter((item) => {
+      if (!isLootSpellbook(item)) return false;
+      if (folder && item.folder?.id !== folder.id) return false;
+      if (game.user.isGM) return true;
+      return item.testUserPermission(game.user, "OBSERVER");
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Summarise a loot spellbook for the browser list.
+ *
+ * Shaped like `summariseSpellbook` so both kinds of book render through one row
+ * template. Only a GM may edit or delete a world item, so `canEdit` follows that.
+ *
+ * @param {object} item A loot spellbook Item.
+ * @returns {object} View model with counts and permission flags.
+ */
+export function summariseLootBook(item) {
+  const spells = getStoredSpells(item);
+  const meta = getLootMeta(item) ?? {};
+  const ranks = [...new Set(spells.map((s) => s.rank))].sort((a, b) => a - b);
+
+  return {
+    id: item.id,
+    uuid: item.uuid,
+    name: item.name,
+    count: spells.length,
+    countLabel:
+      spells.length === 1
+        ? game.i18n.localize("BWS.Browser.SpellSummaryOne")
+        : game.i18n.format("BWS.Browser.SpellSummary", { count: spells.length }),
+    ranks: ranks.map((r) => ({ rank: r, badge: getRankBadge(r) })),
+    canEdit: game.user.isGM,
+    lootLabel: game.i18n.format("BWS.Browser.LootTag", { level: meta.level ?? item.system?.level?.value ?? 0 })
+  };
 }
