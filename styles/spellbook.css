@@ -1040,8 +1040,20 @@ button.bws-anim-button {
   min-height: 0 !important;
   margin: 0 !important;
   padding: 0 3px !important;
-  opacity: 0.55;
+  /* Hidden at rest: PF2e reveals its own row controls on hover, through selectors that
+     cannot match a foreign element, so a gear left at a fixed opacity is the one thing
+     shouting on every row of the tab. */
+  opacity: 0;
   transition: opacity 120ms ease, color 120ms ease;
+}
+
+/* Revealed with the rest of the row's controls. The row is matched loosely because the
+   element PF2e hangs a spell off has changed shape before now; anything that is not a
+   row simply never contains this button. */
+li:hover > button.bws-anim-button,
+li:hover .bws-anim-host > button.bws-anim-button,
+button.bws-anim-button:focus-visible {
+  opacity: 1;
 }
 
 /*
@@ -1075,6 +1087,8 @@ button.bws-anim-button:hover {
   color: var(--bws-accent, #7c6df2);
 }
 
+/* A spell that already has an animation keeps its gear visible at rest: that is the only
+   way to tell, at a glance, which rows are wired up. */
 button.bws-anim-button.is-set {
   color: #7c6df2;
   opacity: 0.95;
