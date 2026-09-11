@@ -1,6 +1,18 @@
-{{!-- Read-only view of a character's spells. Ticked rows are written into a spellbook;
-      nothing here ever writes back to the actor. --}}
+{{!-- Read-only view of a character's spells, rituals or crafting formulas. Ticked rows
+      are written into a book; nothing here ever writes back to the actor. --}}
 <div class="bws-import-inner">
+
+  <div class="bws-import-kinds">
+    <span class="bws-field-label">{{localize "BWS.Import.KindLabel"}}</span>
+    <div class="bws-segments">
+      {{#each kinds}}
+        <button type="button" class="bws-segment{{#if active}} is-active{{/if}}"
+                data-action="setKind" data-kind="{{key}}" aria-pressed="{{active}}">
+          {{label}}
+        </button>
+      {{/each}}
+    </div>
+  </div>
 
   <div class="bws-import-form">
     <div class="bws-field">
@@ -22,7 +34,7 @@
     </div>
 
     <div class="bws-field">
-      <label for="bws-import-name">{{localize "BWS.Creator.NameLabel"}}</label>
+      <label for="bws-import-name">{{localize "BWS.Import.NameLabel"}}</label>
       <input id="bws-import-name" type="text" name="bookName" value="{{bookName}}"
              placeholder="{{localize 'BWS.Creator.NamePlaceholder'}}"
              {{#if nameDisabled}}disabled{{/if}} />
@@ -48,7 +60,7 @@
   {{/if}}
 
   <div class="bws-import-list">
-    {{#if hasSpells}}
+    {{#if hasRows}}
       {{#each groups}}
         <div class="bws-group-header bws-import-group">
           <label class="bws-checkbox bws-import-group-check">
@@ -57,11 +69,11 @@
           </label>
           {{#if kind}}<span class="bws-pill">{{kind}}</span>{{/if}}
           <span class="bws-group-count" data-group-count="{{id}}">
-            {{localize "BWS.Import.GroupCount" selected=selectedCount total=spells.length}}
+            {{localize "BWS.Import.GroupCount" selected=selectedCount total=rows.length}}
           </span>
         </div>
 
-        {{#each spells}}
+        {{#each rows}}
           <label class="bws-spell-row bws-import-row">
             <span class="bws-row-check">
               <input type="checkbox" data-item-id="{{itemId}}" data-group-id="{{../id}}"
@@ -69,16 +81,26 @@
             </span>
             <span class="bws-rank-badge">{{rankBadge}}</span>
             <span class="bws-spell-name" title="{{name}}">{{name}}</span>
-            <span class="bws-traditions">
-              {{#each traditionTags}}<span class="bws-pill bws-pill-{{key}}">{{label}}</span>{{/each}}
-              {{#if isFocus}}<span class="bws-pill bws-pill-focus">{{localize "BWS.Rank.Focus"}}</span>{{/if}}
-              {{#unless linked}}
-                <span class="bws-pill bws-pill-unlinked"
-                      data-tooltip="{{localize 'BWS.Import.UnlinkedTooltip'}}">
-                  {{localize "BWS.Import.Unlinked"}}
-                </span>
-              {{/unless}}
-            </span>
+
+            {{#if isFormula}}
+              <span class="bws-import-detail" title="{{price}}">{{price}}</span>
+              <span class="bws-traditions">
+                {{#if itemTypeLabel}}<span class="bws-pill">{{itemTypeLabel}}</span>{{/if}}
+                <span class="bws-pill bws-pill-rarity-{{rarity}}">{{rarityLabel}}</span>
+              </span>
+            {{else}}
+              <span class="bws-import-detail" title="{{detailLine}}">{{detailLine}}</span>
+              <span class="bws-traditions">
+                {{#each traditionTags}}<span class="bws-pill bws-pill-{{key}}">{{label}}</span>{{/each}}
+                {{#if isFocus}}<span class="bws-pill bws-pill-focus">{{localize "BWS.Rank.Focus"}}</span>{{/if}}
+                {{#unless linked}}
+                  <span class="bws-pill bws-pill-unlinked"
+                        data-tooltip="{{localize 'BWS.Import.UnlinkedTooltip'}}">
+                    {{localize "BWS.Import.Unlinked"}}
+                  </span>
+                {{/unless}}
+              </span>
+            {{/if}}
           </label>
         {{/each}}
       {{/each}}
@@ -86,10 +108,10 @@
       <div class="bws-empty">
         <i class="fa-solid fa-hat-wizard"></i>
         {{#if hasActor}}
-          <p class="bws-empty-title">{{localize "BWS.Import.Empty"}}</p>
-          <p class="bws-empty-hint">{{localize "BWS.Import.EmptyHint"}}</p>
+          <p class="bws-empty-title">{{emptyTitle}}</p>
+          <p class="bws-empty-hint">{{emptyHint}}</p>
         {{else}}
-          <p class="bws-empty-title">{{localize "BWS.Import.NoActors"}}</p>
+          <p class="bws-empty-title">{{noActorsLine}}</p>
         {{/if}}
       </div>
     {{/if}}

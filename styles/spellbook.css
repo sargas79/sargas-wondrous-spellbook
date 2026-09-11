@@ -82,7 +82,10 @@
 .bws-header {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) auto minmax(160px, 1fr);
+  /* The kind row spans the full width: it decides what every control under it means,
+     so it reads as a heading for the rest of the bar rather than one more filter. */
   grid-template-areas:
+    "kind kind      kind"
     "name tradition search"
     "name tradition focus"
     "rank rank      rank";
@@ -94,11 +97,20 @@
   flex: 0 0 auto;
 }
 
+.bws-field-kind { grid-area: kind; }
 .bws-field-name { grid-area: name; }
 .bws-field-tradition { grid-area: tradition; }
 .bws-field-search { grid-area: search; }
 .bws-field-focus { grid-area: focus; }
 .bws-field-rank { grid-area: rank; }
+
+/* Rituals have no focus toggle, so nothing should be left holding that row open. */
+.bws-header.is-rituals {
+  grid-template-areas:
+    "kind kind      kind"
+    "name tradition search"
+    "rank rank      rank";
+}
 
 .bws-field {
   display: flex;
@@ -1324,7 +1336,7 @@
    no per-row buttons competing for the click. */
 .bws-import-row {
   cursor: pointer;
-  grid-template-columns: 26px auto minmax(0, 1fr) auto;
+  grid-template-columns: 26px auto minmax(0, 1fr) minmax(0, auto) auto;
 }
 
 .bws-pill-unlinked {
@@ -1347,3 +1359,101 @@
   gap: 8px;
   justify-content: flex-end;
 }
+
+/* -------------------------------------------------- *
+ * Ritual and formula books
+ * -------------------------------------------------- */
+
+/* The kind switch sits above the rest of the importer's fields, since changing it
+   re-reads the sheet and relabels everything below. */
+.bws-import-kinds {
+  align-items: center;
+  background: var(--bws-bg-raised);
+  border-bottom: 1px solid var(--bws-border-soft);
+  display: flex;
+  flex: 0 0 auto;
+  gap: 10px;
+  padding: 8px 12px 0;
+}
+
+.bws-import-detail {
+  color: var(--bws-text-dim);
+  font-size: 10.5px;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bws-book-kind-icon {
+  color: var(--bws-text-dim);
+  font-size: 10px;
+  margin-right: 4px;
+}
+
+.bws-formula-book-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.bws-formula-header {
+  align-items: flex-end;
+  background: var(--bws-bg-raised);
+  border-bottom: 1px solid var(--bws-border);
+  display: flex;
+  flex: 0 0 auto;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.bws-formula-header .bws-field {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.bws-formula-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bws-formula-count { color: var(--bws-text-muted); font-size: 11px; }
+
+.bws-formula-target { color: var(--bws-text-dim); font-size: 10px; }
+.bws-formula-target.is-warning { color: #e0b64a; }
+
+.bws-formula-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.bws-formula-row {
+  grid-template-columns: minmax(0, 1fr) auto auto auto 30px;
+}
+
+.bws-formula-price {
+  color: var(--bws-text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.bws-known-tag {
+  align-items: center;
+  color: var(--bws-text-dim);
+  display: inline-flex;
+  font-size: 10px;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.bws-formula-row.is-known .bws-spell-name { color: var(--bws-text-muted); }
+
+.bws-teach:not(:disabled) { color: var(--bws-accent); }

@@ -5,6 +5,9 @@
  * into an actor's slots, this collects the spells an actor already has and turns them
  * back into the stored records a spellbook holds.
  *
+ * The same pass serves ritual books: a ritual is an ordinary spell item on the sheet,
+ * bound to a ritual spellcasting entry, so only the pool it is matched against changes.
+ *
  * An owned spell is a copy, not a reference, so every row is matched back to the
  * compendium original before it is stored — by source id, then slug, then name. That
  * matters because a stored record's uuid is what "Send to Slot" later resolves: a book
@@ -13,12 +16,13 @@
  * user knows the row is tied to that one sheet.
  */
 
-import { MODULE_ID } from "./constants.js";
+import { BOOK_KINDS, MODULE_ID } from "./constants.js";
 import { ANIMATION_FLAG } from "./animation-config.js";
 import {
   MAX_RANK,
   getRankBadge,
   getRarityLabel,
+  getRitualDetails,
   getSpellRank,
   getSpellRarity,
   getSpellSlug,
@@ -26,13 +30,17 @@ import {
   isCantrip,
   isFocusSpell,
   isRitual,
+  loadAllRituals,
   loadAllSpells
 } from "./spell-query.js";
+import { collectActorFormulas, getActorFormulaUuids } from "./formula-query.js";
 import {
   canEditSpellbook,
   createSpellbook,
+  getBookKind,
   getStoredSpells,
   getUserSpellbooks,
+  toStoredFormula,
   toStoredSpell,
   updateSpellbook
 } from "./persistence.js";
@@ -79,10 +87,15 @@ function getBaseRank(item) {
 /**
  * Build the lookup tables used to match a sheet spell to its compendium original.
  *
+ * The two pools are kept apart on purpose: a ritual must never resolve to a same-named
+ * slot spell, or a ritual book would quietly store something that is not a ritual.
+ *
+ * @param {string} kind `spells` or `rituals`.
  * @returns {Promise<{ byUuid: Map<string, object>, bySlug: Map<string, object>, byName: Map<string, object> }>}
  */
-async function buildMatchIndex() {
-  const { spells } = await loadAllSpells();
+async function buildMatchIndex(kind) {
+  const spells =
+    kind === BOOK_KINDS.RITUALS ? (await loadAllRituals()).rituals : (await loadAllSpells()).spells;
 
   const byUuid = new Map();
   const bySlug = new Map();
@@ -156,33 +169,120 @@ function getEntrySpells(entry, actor) {
 }
 
 /**
- * Actors the current user could import a spellbook from.
+ * One-line summary of a ritual's cast time, cost and secondary casters.
  *
- * Ownership is required because the import reads the sheet's items; actors with no
- * spells at all are dropped so the picker never offers an empty sheet.
+ * Built for the exporter's rows, where there is no space for a table but a GM still
+ * wants to see what a ritual is going to cost before ticking it.
  *
+ * @param {object} ritual The detail object from `getRitualDetails`.
+ * @returns {string}
+ */
+function describeRitual(ritual) {
+  const parts = [];
+  if (ritual.castTime) parts.push(ritual.castTime);
+  if (ritual.cost) parts.push(ritual.cost);
+  if (ritual.secondaryCasters) {
+    parts.push(
+      game.i18n.format("BWS.Ritual.SecondaryCasters", { count: ritual.secondaryCasters })
+    );
+  }
+  return parts.join(" \u00b7 ");
+}
+
+/**
+ * Actors the current user could import a book from.
+ *
+ * Ownership is required because the import reads the sheet; actors with nothing of the
+ * requested kind are dropped so the picker never offers an empty sheet. Rituals share
+ * the spell test rather than getting their own: a sheet's rituals are spell items, and
+ * testing them properly would mean walking every spell on every actor to build a
+ * dropdown.
+ *
+ * @param {object} [options]
+ * @param {string} [options.kind] One of the book kinds.
  * @returns {object[]} Actor documents, sorted by name.
  */
-export function listImportableActors() {
+export function listImportableActors({ kind = BOOK_KINDS.SPELLS } = {}) {
+  const hasContent =
+    kind === BOOK_KINDS.FORMULAS
+      ? (actor) => getActorFormulaUuids(actor).length > 0
+      : (actor) => (actor.itemTypes?.spell?.length ?? 0) > 0;
+
   return game.actors
-    .filter((actor) => actor.isOwner && (actor.itemTypes?.spell?.length ?? 0) > 0)
+    .filter((actor) => actor.isOwner && actor.type !== "loot" && hasContent(actor))
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Collect whatever a book of the given kind takes from a character sheet.
+ *
+ * The one entry point the exporter uses, so its selection list is the same shape for all
+ * three kinds: every group holds `rows`, and every row carries the `record` that would
+ * be written into the book.
+ *
+ * @param {object} actor The actor to read.
+ * @param {string} [kind] One of the book kinds.
+ * @returns {Promise<{ groups: object[], total: number, unlinked: number, rituals: number, missing: number }>}
+ */
+export async function collectFromActor(actor, kind = BOOK_KINDS.SPELLS) {
+  if (kind === BOOK_KINDS.FORMULAS) {
+    const { groups, total, missing } = await collectActorFormulas(actor);
+    return {
+      total,
+      missing,
+      // A formula matches its compendium item by uuid or not at all, so neither of the
+      // spell importer's two caveats can arise here.
+      unlinked: 0,
+      rituals: 0,
+      groups: groups.map((group) => ({
+        id: group.id,
+        name: group.name,
+        kind: "",
+        rows: group.formulas.map((formula) => ({
+          // A formula is a uuid on the sheet rather than an item, so the uuid is also
+          // the row key - which makes duplicates impossible by construction.
+          itemId: formula.uuid,
+          isFormula: true,
+          linked: true,
+          name: formula.name,
+          img: formula.img,
+          rankBadge: game.i18n.format("BWS.Formula.LevelShort", { level: formula.level }),
+          price: formula.price,
+          rarity: formula.rarity,
+          rarityLabel: getRarityLabel(formula.rarity),
+          itemTypeLabel: formula.itemTypeLabel,
+          record: toStoredFormula(formula)
+        }))
+      }))
+    };
+  }
+
+  const data = await collectActorSpells(actor, { kind });
+  return {
+    ...data,
+    missing: 0,
+    groups: data.groups.map((group) => ({ ...group, rows: group.spells }))
+  };
 }
 
 /**
  * Collect an actor's spells, grouped by the spellcasting entry that holds them.
  *
- * Rituals are dropped here for the same reason the compendium query drops them: a
- * spellbook exists to feed spell slots, and a ritual can never occupy one. The count
- * comes back on the result so the UI can say so rather than silently losing rows.
+ * In `spells` mode rituals are dropped, for the same reason the compendium query drops
+ * them: a spellbook exists to feed spell slots, and a ritual can never occupy one. The
+ * count comes back on the result so the UI can say so rather than silently losing rows.
+ * In `rituals` mode the filter is exactly inverted and nothing else changes.
  *
  * @param {object} actor The actor to read.
+ * @param {object} [options]
+ * @param {string} [options.kind] `spells` or `rituals`.
  * @returns {Promise<{ groups: object[], total: number, unlinked: number, rituals: number }>}
  */
-export async function collectActorSpells(actor) {
+export async function collectActorSpells(actor, { kind = BOOK_KINDS.SPELLS } = {}) {
   if (!actor) return { groups: [], total: 0, unlinked: 0, rituals: 0 };
 
-  const index = await buildMatchIndex();
+  const wantRituals = kind === BOOK_KINDS.RITUALS;
+  const index = await buildMatchIndex(kind);
   const entries = actor.itemTypes.spellcastingEntry ?? [];
   const seen = new Set();
   const groups = [];
@@ -201,13 +301,19 @@ export async function collectActorSpells(actor) {
     if (seen.has(item.id)) return null;
     seen.add(item.id);
 
-    if (isRitual(item)) {
-      rituals++;
+    const itemIsRitual = isRitual(item);
+    if (itemIsRitual !== wantRituals) {
+      // Only worth reporting the other way round: a spellbook silently losing the
+      // sheet's rituals is the surprising case, a ritual book ignoring spells is not.
+      if (itemIsRitual) rituals++;
       return null;
     }
 
     const match = matchCompendiumSpell(item, index);
     const rank = match ? match.rank : getBaseRank(item);
+    // Cast time, cost and secondary casters, so a ritual book's page reads without
+    // reopening the compendium it came from.
+    const ritual = wantRituals ? match?.ritual ?? getRitualDetails(item) : null;
     const traditions = match ? match.traditions : getSpellTraditions(item);
     const rarity = match ? match.rarity : getSpellRarity(item);
     // Kept through the import so a configured animation survives the round trip out to
@@ -232,6 +338,7 @@ export async function collectActorSpells(actor) {
       rarityLabel: getRarityLabel(rarity),
       isCantrip: rank === 0,
       isFocus: match ? match.isFocus : isFocusSpell(item),
+      ...(ritual ? { ritual, detailLine: describeRitual(ritual) } : {}),
       linked: !!match,
       // What actually gets written into the book. An unmatched spell keeps its owned
       // uuid, which resolves for as long as this actor holds the item.
@@ -246,6 +353,7 @@ export async function collectActorSpells(actor) {
           traditions,
           rarity
         }),
+        ...(ritual ? { ritual } : {}),
         ...(animation ? { jb2aAnimation: animation } : {})
       })
     };
@@ -282,11 +390,16 @@ export async function collectActorSpells(actor) {
 }
 
 /**
- * Spellbooks the current user may import into.
+ * Books the current user may import into.
+ *
+ * Filtered to one kind: merging spells into a formula book would write records the
+ * book's page renderer cannot read.
+ *
+ * @param {string} [kind] One of the book kinds.
  * @returns {object[]} JournalEntry documents, sorted by name.
  */
-export function listImportTargets() {
-  return getUserSpellbooks().filter((journal) => canEditSpellbook(journal));
+export function listImportTargets(kind = BOOK_KINDS.SPELLS) {
+  return getUserSpellbooks({ kind }).filter((journal) => canEditSpellbook(journal));
 }
 
 /**
@@ -298,13 +411,20 @@ export function listImportTargets() {
  * does not know about.
  *
  * @param {object} params
- * @param {object[]} params.spells Stored spell records to write.
- * @param {string} [params.name] Name for a new spellbook. Ignored when merging.
- * @param {object} [params.journal] An existing spellbook to merge into.
+ * @param {object[]} params.spells Stored records to write.
+ * @param {string} [params.name] Name for a new book. Ignored when merging.
+ * @param {object} [params.journal] An existing book to merge into.
+ * @param {string} [params.kind] Kind of book to create. Ignored when merging, where the
+ *   target book's own kind decides.
  * @returns {Promise<{ journal: object, added: number, skipped: number }|null>}
  *   Null when the write failed; the underlying helper has already reported why.
  */
-export async function importIntoSpellbook({ spells, name, journal = null }) {
+export async function importIntoSpellbook({
+  spells,
+  name,
+  journal = null,
+  kind = BOOK_KINDS.SPELLS
+}) {
   const incoming = [];
   const seen = new Set();
   // One compendium spell can sit in two entries on the same sheet; the book holds it once.
@@ -315,8 +435,15 @@ export async function importIntoSpellbook({ spells, name, journal = null }) {
   }
 
   if (!journal) {
-    const created = await createSpellbook({ name, spells: incoming });
+    const created = await createSpellbook({ name, spells: incoming, kind });
     return created ? { journal: created, added: incoming.length, skipped: 0 } : null;
+  }
+
+  // Refuse a mismatch outright rather than writing records the book cannot render. The
+  // exporter only ever offers same-kind targets, so this catches API misuse.
+  if (getBookKind(journal) !== kind) {
+    ui.notifications.warn(game.i18n.localize("BWS.Import.KindMismatch"));
+    return null;
   }
 
   const existing = getStoredSpells(journal);

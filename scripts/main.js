@@ -21,8 +21,10 @@ import {
   openLootBook,
   registerLootBookContextMenu
 } from "./loot-book-app.js";
+import { FormulaBookApp, openFormulaBook } from "./formula-book-app.js";
 import * as loot from "./loot-generator.js";
 import * as importer from "./import-spells.js";
+import * as formulas from "./formula-query.js";
 import * as persistence from "./persistence.js";
 
 /**
@@ -190,7 +192,10 @@ Hooks.once("init", () => {
     openLootBook,
     ImportApp,
     openImport,
+    FormulaBookApp,
+    openFormulaBook,
     ...importer,
+    ...formulas,
     ...loot,
     ...persistence
   };

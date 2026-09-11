@@ -27,7 +27,10 @@
       {{#each books}}
         <div class="bws-book-row">
           <div class="bws-book-main">
-            <span class="bws-book-name" title="{{name}}">{{name}}</span>
+            <span class="bws-book-name" title="{{name}}">
+              <i class="{{kindIcon}} bws-book-kind-icon" data-tooltip="{{kindLabel}}"></i>
+              {{name}}
+            </span>
             <span class="bws-book-meta">
               {{countLabel}}
               {{#unless canEdit}}
@@ -49,12 +52,20 @@
                     aria-label="{{localize 'BWS.Browser.Open'}}">
               <i class="fa-solid fa-book-open"></i>
             </button>
-            <button type="button" class="bws-icon-button" data-action="edit" data-id="{{id}}"
-                    data-tooltip="{{localize 'BWS.Browser.Edit'}}"
-                    aria-label="{{localize 'BWS.Browser.Edit'}}"
-                    {{#unless canEdit}}disabled{{/unless}}>
-              <i class="fa-solid fa-pen-to-square"></i>
-            </button>
+            {{#if isFormulas}}
+              <button type="button" class="bws-icon-button" data-action="edit" data-id="{{id}}"
+                      data-tooltip="{{localize 'BWS.Formula.OpenBook'}}"
+                      aria-label="{{localize 'BWS.Formula.OpenBook'}}">
+                <i class="fa-solid fa-hammer"></i>
+              </button>
+            {{else}}
+              <button type="button" class="bws-icon-button" data-action="edit" data-id="{{id}}"
+                      data-tooltip="{{localize 'BWS.Browser.Edit'}}"
+                      aria-label="{{localize 'BWS.Browser.Edit'}}"
+                      {{#unless canEdit}}disabled{{/unless}}>
+                <i class="fa-solid fa-pen-to-square"></i>
+              </button>
+            {{/if}}
             <button type="button" class="bws-icon-button bws-icon-danger" data-action="remove" data-id="{{id}}"
                     data-tooltip="{{localize 'BWS.Browser.Delete'}}"
                     aria-label="{{localize 'BWS.Browser.Delete'}}"

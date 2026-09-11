@@ -1,8 +1,21 @@
-{{!-- Filter bar: name, tradition segments, search and the focus toggle. --}}
+{{!-- Filter bar: kind, name, tradition segments, search and the focus toggle. --}}
 {{!-- Deliberately excluded from search re-renders so the input keeps focus. --}}
-<section class="bws-header">
+<section class="bws-header{{#if isRituals}} is-rituals{{/if}}">
+  {{#unless kindLocked}}
+    <div class="bws-field bws-field-kind">
+      <span class="bws-field-label">{{localize "BWS.Creator.KindLabel"}}</span>
+      <div class="bws-segments" role="group" aria-label="{{localize 'BWS.Creator.KindLabel'}}">
+        {{#each kinds}}
+          <button type="button" class="bws-segment{{#if active}} is-active{{/if}}"
+                  data-action="setKind" data-kind="{{key}}"
+                  aria-pressed="{{#if active}}true{{else}}false{{/if}}">{{label}}</button>
+        {{/each}}
+      </div>
+    </div>
+  {{/unless}}
+
   <div class="bws-field bws-field-name">
-    <label for="bws-name">{{localize "BWS.Creator.NameLabel"}}</label>
+    <label for="bws-name">{{nameLabel}}</label>
     <input id="bws-name" type="text" name="spellbookName" value="{{spellbookName}}"
            placeholder="{{localize 'BWS.Creator.NamePlaceholder'}}" autocomplete="off"
            {{#if readOnly}}disabled{{/if}} />
@@ -42,8 +55,11 @@
     </div>
   </div>
 
-  <label class="bws-checkbox bws-field-focus">
-    <input type="checkbox" name="includeFocus" {{#if includeFocus}}checked{{/if}} />
-    <span>{{localize "BWS.Creator.IncludeFocus"}}</span>
-  </label>
+  {{!-- No ritual is a focus spell, so the toggle would have nothing to say. --}}
+  {{#unless isRituals}}
+    <label class="bws-checkbox bws-field-focus">
+      <input type="checkbox" name="includeFocus" {{#if includeFocus}}checked{{/if}} />
+      <span>{{localize "BWS.Creator.IncludeFocus"}}</span>
+    </label>
+  {{/unless}}
 </section>
