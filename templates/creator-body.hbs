@@ -33,11 +33,17 @@
               {{#if isFocus}}<span class="bws-pill bws-pill-focus">{{localize "BWS.Rank.Focus"}}</span>{{/if}}
             </span>
 
-            <button type="button" class="bws-send" data-action="sendToSlot" data-uuid="{{uuid}}"
-                    data-tooltip="{{localize 'BWS.Creator.SendToSlot'}}"
-                    aria-label="{{localize 'BWS.Creator.SendToSlot'}}">
-              <i class="fa-solid fa-arrow-down-to-line"></i>
-            </button>
+            {{!-- PF2e casts rituals outside spell slots, so a ritual row has nowhere to be
+                  sent. The empty cell keeps the grid's last column in place. --}}
+            {{#if isRitual}}
+              <span class="bws-send-placeholder"></span>
+            {{else}}
+              <button type="button" class="bws-send" data-action="sendToSlot" data-uuid="{{uuid}}"
+                      data-tooltip="{{localize 'BWS.Creator.SendToSlot'}}"
+                      aria-label="{{localize 'BWS.Creator.SendToSlot'}}">
+                <i class="fa-solid fa-arrow-down-to-line"></i>
+              </button>
+            {{/if}}
           </div>
         {{/each}}
       {{/each}}
@@ -72,7 +78,7 @@
           </div>
         {{/each}}
       {{else}}
-        <p class="bws-selected-empty">{{localize "BWS.Creator.SelectedEmpty"}}</p>
+        <p class="bws-selected-empty">{{emptyNote}}</p>
       {{/if}}
     </div>
 
@@ -87,7 +93,7 @@
       </p>
       <button type="button" class="bws-button bws-button-primary" data-action="save"
               {{#unless canSave}}disabled{{/unless}}>
-        <i class="fa-solid fa-floppy-disk"></i> {{localize "BWS.Creator.Save"}}
+        <i class="fa-solid fa-floppy-disk"></i> {{saveLabel}}
       </button>
       <button type="button" class="bws-button" data-action="cancel">
         {{localize "BWS.Creator.Cancel"}}

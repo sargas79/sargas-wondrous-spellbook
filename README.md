@@ -9,15 +9,25 @@ character's spellcasting slots — without replacing or reskinning the PF2e char
 
 ## What it does
 
-**A spellbook is storage only.** It holds spells so they can be sent into an actor's existing
+**A book is storage only.** It holds spells so they can be sent into an actor's existing
 slots. Casting, and any animation that plays on cast, happen on the PF2e character sheet — not
-in this module's windows.
+in this module's windows. The same machinery holds two other kinds of book: **ritual books**
+and **crafter's blueprints**.
 
 - **Spellbook Creator** — browse every spell in every Item compendium, filtered by tradition,
   focus category and a free-text search over names and traits. Tick spells to collect them into
   a book; save the book as a Journal Entry.
 - **My Spellbooks** — an ownership-filtered browser. GMs see every spellbook; players see only
   the ones they own.
+- **Import from a character sheet** — read the spells a character already has and store
+  them as a spellbook, either as a new book or merged into an existing one. Each spell is
+  matched back to its compendium original, so the book keeps working after that character
+  is gone.
+- **Ritual books** — the one thing a spellbook cannot hold. Export a character's rituals,
+  or build a ritual book from the compendiums, and get a journal page listing each ritual's
+  cast time, cost and secondary casters.
+- **Crafter's blueprints** — export a character's crafting formulas as a formula book, then
+  open it against any crafter you own and copy formulas straight into their sheet.
 - **Send to Slot** — the one write path from a spellbook to an actor. Pick a spellcasting entry
   and a rank; the spell is created as an embedded item bound to that entry, so it appears in the
   sheet's own spellcasting tab.
@@ -82,6 +92,79 @@ open slot; spontaneous and innate entries just receive the spell.
 
 If the actor has no spellcasting entries, the dialog says so rather than offering an empty
 dropdown.
+
+### Importing from a character sheet
+
+*My Spellbooks* has an **Import** button, and every PF2e character sheet you own grows a
+small import icon in its window header. Either opens the importer on that character.
+
+At the top of the window is a switch: **Spells**, **Rituals**, **Formulas**. It decides what
+is read off the sheet, which existing books may be merged into, and what the resulting book
+is. Everything below it works the same way for all three.
+
+The list groups rows by spellcasting entry (or by item level, for formulas) with everything
+ticked to start with. Untick what you don't want, tick a group's name to take or drop the
+whole group, then either create a new book or pick an existing one from **Import into** to
+merge into it. Merging appends only what the book does not already hold, so importing the
+same sheet twice adds nothing the second time. Only books of the matching kind are offered.
+
+**Nothing is written to the character.** The importer only reads the sheet and writes a
+Journal Entry.
+
+An owned spell is a copy rather than a reference, so each spell and ritual row is matched
+back to its compendium original — by source id, then slug, then name. The book keeps the
+sheet's own name and icon, so a spell you renamed stays renamed; the compendium name is
+shown beside it in the list so you can see what the link points at. One that matches
+nothing (homebrew that lives only on that sheet) is marked **Unlinked**: it is still
+importable, but the book points at that character's own copy and stops resolving if the
+character is deleted. Formulas need no such matching: a PF2e formula is already stored as
+the compendium uuid of the item it produces.
+
+Anything the import cannot take is counted in a note above the list rather than vanishing:
+rituals skipped while building a spellbook, and formulas whose item is no longer installed.
+
+Any animation you have configured on a sheet's spell rides along into the book, so sending
+that spell to another character carries the effect with it.
+
+### Ritual books
+
+A spellbook holds what can fill a spell slot, which is why rituals have never been part of
+one. They get their own book instead, built either way:
+
+- **From a sheet** — open the importer and switch to **Rituals**. PF2e keeps a character's
+  rituals on the Spellcasting tab's Rituals sub-tab rather than in a spellcasting entry,
+  and the list shows all of them in one group.
+- **From the compendiums** — open the Spellbook Creator and switch the **Book** segment from
+  Spells to Rituals. The tradition filter, rank chips and search all still apply; the focus
+  toggle disappears, since no ritual is a focus spell.
+
+The journal page a ritual book writes is a table per rank listing each ritual's cast time,
+cost and number of secondary casters, so a GM can judge one without opening its compendium
+entry. Those details are stored on the book, so the page stays readable even if the source
+compendium is later uninstalled.
+
+A book is one kind or the other for life. Switching the creator's Book segment clears
+whatever is ticked, and reopening an existing book locks the switch to that book's kind.
+
+A ritual book is for keeping and reading rituals, not for filling slots: PF2e casts rituals
+outside spell slots, so ritual rows have no Send to Slot arrow, and the dialog refuses a
+ritual from any other route.
+
+### Crafter's blueprints
+
+Open the importer, switch to **Formulas**, and the list shows the character's crafting
+formulas grouped by item level with the price and rarity of each. Save it and you get a
+formula book — the same kind of journal entry, listed in *My Spellbooks* alongside the rest.
+
+Opening a formula book (the hammer button on its row) gives you the reader: pick any
+character you own from the dropdown — only characters have a formula list in PF2e, and each row gets a **copy** button that writes that formula into
+their sheet. Formulas the crafter already knows are marked *Known* and their buttons are
+disabled, so the book reads as a checklist of what is left to learn; **Copy N missing** does
+the whole remainder in one go. The book is never consumed, and adding a formula a character
+already has is refused rather than duplicated.
+
+A formula book is not editable in the Spellbook Creator — it holds items, not spells. To
+change one, re-import from a sheet (merging adds only what is new) or edit its journal page.
 
 ### Rolling a spellbook as treasure
 
@@ -173,6 +256,17 @@ api.sendToSlot({ uuid: "Compendium....." }); // open the Send to Slot dialog
 api.getUserSpellbooks();                    // JournalEntry[] the current user may see
 api.getAnimationsAvailable();               // boolean, re-evaluated live
 
+api.openImport();                           // open the character sheet importer
+api.openImport({ actor, kind: "rituals" }); // ...on a particular actor and kind
+api.collectFromActor(actor, "formulas");    // -> { groups, total, unlinked, rituals, missing }
+api.importIntoSpellbook({ spells, name, kind: "rituals" }); // write a new or existing book
+api.openCreator({ kind: "rituals" });       // creator, in ritual mode
+
+api.openFormulaBook(journal);               // open a formula book's crafter reader
+api.collectActorFormulas(actor);            // -> { groups, total, missing }
+api.addFormulaToActor(actor, uuid);         // teach one formula, refusing duplicates
+api.getBookKind(journal);                   // "spells" | "rituals" | "formulas"
+
 api.listSpellSources();                     // [{ key, label, count }] of every source
 api.openLootGenerator();                    // open the loot roller (GM)
 api.generateLootSpellbook({ level: 7 });    // headless roll -> { spells, meta, name }
@@ -208,6 +302,10 @@ scripts/
   spellbook-app.js               Spellbook Creator (ApplicationV2)
   my-spellbooks-app.js           My Spellbooks browser (ApplicationV2)
   slot-manager.js                Send to Slot dialog, character sheet injection
+  import-spells.js               Sheet reading, compendium matching, book merging
+  import-app.js                  Import from Character Sheet (ApplicationV2)
+  formula-query.js               Crafting formula reading, pricing and the actor write
+  formula-book-app.js            Crafter's blueprints reader (ApplicationV2)
   loot-generator.js              Seeded random book rolling, pricing, Item creation
   loot-generator-app.js          Loot Spellbook Generator (GM, ApplicationV2)
   loot-book-app.js               Loot book reader, learn flow, item sheet injection
@@ -226,6 +324,20 @@ back to raw source paths, so the module tolerates data-model changes across PF2e
 Similarly, `slot-manager.js` prefers PF2e's own `SpellcastingEntryPF2e#addSpell` and
 `#prepareSpell` helpers and only falls back to a manual `Item.create` + `system.location` write
 if those are unavailable.
+
+Crafting formulas are read from `system.crafting.formulas`, with PF2e's `actor.crafting`
+helper as a fallback, and written back through a plain actor update. Prices come from PF2e's
+`Coins` class where it is present and are assembled denomination by denomination when the
+value is a raw object, so a formula book prints "100 gp, 5 sp" either way.
+
+Rituals are separated from slot-fillable spells inside the compendium cache rather than by
+each caller filtering for them, so the loot generator and Send to Slot cannot see one even by
+accident, and the ritual pool costs no extra pass over the packs.
+
+The importer reads a sheet spell's origin from `_stats.compendiumSource` and from the older
+`flags.core.sourceId`, and falls back to matching on PF2e's `system.slug` and then on the
+spell name, so a spell keeps its compendium link across both Foundry's move of that field and
+a compendium being renamed or replaced.
 
 The spell-cast signal has moved between PF2e releases. The module listens on `pf2e.castSpell`
 and additionally on `createChatMessage` (reading the cast card's origin flags) as a

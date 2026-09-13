@@ -13,7 +13,7 @@
  */
 
 import { MODULE_ID, template } from "./constants.js";
-import { MAX_RANK, getRankLabel, resolveSpell } from "./spell-query.js";
+import { MAX_RANK, getRankLabel, isRitual, resolveSpell } from "./spell-query.js";
 import { getAnimationsAvailable, openAnimationConfigDialog } from "./animation-config.js";
 
 /**
@@ -171,6 +171,15 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
   const spellDoc = await resolveSpell(uuid);
   if (!spellDoc) {
     ui.notifications.error(game.i18n.localize("BWS.Error.SpellMissing"));
+    return null;
+  }
+
+  // PF2e casts rituals through a virtual ritual entry that is not an item, so every entry
+  // this dialog could offer is a slot-based one - and a ritual prepared into a spell slot
+  // is a corrupt sheet, not a feature. The creator hides the arrow on ritual rows; this
+  // guard covers every other way in, the module API included.
+  if (isRitual(spellDoc)) {
+    ui.notifications.warn(game.i18n.format("BWS.Slot.RitualRefused", { spell: spellDoc.name }));
     return null;
   }
 

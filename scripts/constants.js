@@ -17,8 +17,30 @@ export const DEFAULT_FOLDER_NAME = "Blizzard's Spellbooks";
 /** Default name of the Item folder that stores generated loot spellbooks. */
 export const DEFAULT_LOOT_FOLDER_NAME = "Spellbook Loot";
 
-/** Flag key on a JournalEntry holding the array of stored spell records. */
+/**
+ * Flag key on a JournalEntry holding the array of stored records.
+ *
+ * Every book kind stores its contents here, whatever those contents are: spells and
+ * rituals share the spell record shape, a formula book holds formula records. What a
+ * given array means is decided by {@link BOOK_KIND_FLAG}, so one reader helper serves
+ * all three kinds and books written before kinds existed still read as spellbooks.
+ */
 export const SPELLS_FLAG = "spells";
+
+/** Flag key on a JournalEntry naming which kind of book it is. */
+export const BOOK_KIND_FLAG = "kind";
+
+/**
+ * The kinds of book this module writes.
+ *
+ * `spells` is the default for anything that predates the flag, which is exactly what a
+ * book without one is.
+ */
+export const BOOK_KINDS = Object.freeze({
+  SPELLS: "spells",
+  RITUALS: "rituals",
+  FORMULAS: "formulas"
+});
 
 /**
  * Flag key on a physical Item holding the loot metadata (seed, level, learned map).

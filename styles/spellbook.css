@@ -82,7 +82,10 @@
 .bws-header {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) auto minmax(160px, 1fr);
+  /* The kind row spans the full width: it decides what every control under it means,
+     so it reads as a heading for the rest of the bar rather than one more filter. */
   grid-template-areas:
+    "kind kind      kind"
     "name tradition search"
     "name tradition focus"
     "rank rank      rank";
@@ -94,11 +97,20 @@
   flex: 0 0 auto;
 }
 
+.bws-field-kind { grid-area: kind; }
 .bws-field-name { grid-area: name; }
 .bws-field-tradition { grid-area: tradition; }
 .bws-field-search { grid-area: search; }
 .bws-field-focus { grid-area: focus; }
 .bws-field-rank { grid-area: rank; }
+
+/* Rituals have no focus toggle, so nothing should be left holding that row open. */
+.bws-header.is-rituals {
+  grid-template-areas:
+    "kind kind      kind"
+    "name tradition search"
+    "rank rank      rank";
+}
 
 .bws-field {
   display: flex;
@@ -1028,8 +1040,23 @@ button.bws-anim-button {
   min-height: 0 !important;
   margin: 0 !important;
   padding: 0 3px !important;
-  opacity: 0.55;
+  /* Hidden at rest: PF2e reveals its own row controls on hover, through selectors that
+     cannot match a foreign element, so a gear left at a fixed opacity is the one thing
+     shouting on every row of the tab. */
+  opacity: 0;
   transition: opacity 120ms ease, color 120ms ease;
+}
+
+/* Revealed with the rest of the row's controls. Every step from the hovered element is a
+   child combinator, and that is load-bearing: PF2e renders each spellcasting entry as an
+   `<li data-item-id>` wrapping all of its spell rows, so a descendant search from a
+   hovered `<li>` would light up every gear in the entry the moment the pointer touched
+   any one row. The row is keyed on `data-item-id` rather than a tag, and the button sits
+   either in the row's tagged control cluster or directly in the row. */
+[data-item-id]:hover > .bws-anim-host > button.bws-anim-button,
+[data-item-id]:hover > button.bws-anim-button,
+button.bws-anim-button:focus-visible {
+  opacity: 1;
 }
 
 /*
@@ -1063,6 +1090,8 @@ button.bws-anim-button:hover {
   color: var(--bws-accent, #7c6df2);
 }
 
+/* A spell that already has an animation keeps its gear visible at rest: that is the only
+   way to tell, at a glance, which rows are wired up. */
 button.bws-anim-button.is-set {
   color: #7c6df2;
   opacity: 0.95;
@@ -1334,3 +1363,230 @@ button.bws-anim-button.is-set {
   font-size: 10px;
   font-variant-numeric: tabular-nums;
 }
+
+/* -------------------------------------------------- *
+ * Character sheet import
+ * -------------------------------------------------- */
+
+.bws-import-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.bws-import-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 10px;
+  padding: 10px 12px;
+  background: var(--bws-bg-raised);
+  border-bottom: 1px solid var(--bws-border);
+  flex: 0 0 auto;
+}
+
+.bws-import-form .bws-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.bws-import-form select,
+.bws-import-form input[type="text"] { width: 100%; }
+
+.bws-import-status {
+  align-items: center;
+  border-bottom: 1px solid var(--bws-border-soft);
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 6px 12px;
+}
+
+.bws-import-summary {
+  color: var(--bws-text-muted);
+  font-size: 11px;
+}
+
+.bws-import-bulk {
+  display: flex;
+  gap: 6px;
+}
+
+.bws-import-note {
+  align-items: baseline;
+  border-bottom: 1px solid var(--bws-border-soft);
+  color: var(--bws-text-dim);
+  display: flex;
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  gap: 6px;
+  line-height: 1.45;
+  margin: 0;
+  padding: 6px 12px;
+}
+
+.bws-import-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+/* The shared group header spreads its children apart; here the entry name and its kind
+   belong together, with only the count pushed to the far edge. */
+.bws-import-group {
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+.bws-import-group [data-group-count] { margin-left: auto; }
+
+/* The entry name doubles as the "tick this whole entry" control, so the checkbox sits
+   inside the group header rather than beside it. */
+.bws-import-group-check {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.bws-import-group-check .bws-group-title { cursor: pointer; }
+
+/* Rows are labels here: the whole row is the checkbox's hit area, since this list has
+   no per-row buttons competing for the click. */
+.bws-import-row {
+  cursor: pointer;
+  grid-template-columns: 26px auto minmax(0, 1fr) minmax(0, auto) auto;
+}
+
+.bws-pill-unlinked {
+  border-color: rgba(224, 182, 74, 0.45);
+  color: #e0b64a;
+}
+
+.bws-import-footer {
+  background: var(--bws-bg-raised);
+  border-top: 1px solid var(--bws-border);
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.bws-import-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* -------------------------------------------------- *
+ * Ritual and formula books
+ * -------------------------------------------------- */
+
+/* The kind switch sits above the rest of the importer's fields, since changing it
+   re-reads the sheet and relabels everything below. */
+.bws-import-kinds {
+  align-items: center;
+  background: var(--bws-bg-raised);
+  border-bottom: 1px solid var(--bws-border-soft);
+  display: flex;
+  flex: 0 0 auto;
+  gap: 10px;
+  padding: 8px 12px 0;
+}
+
+/* The compendium name under a spell the sheet has renamed. */
+.bws-import-source-name {
+  color: var(--bws-text-dim);
+  font-size: 10px;
+  margin-left: 6px;
+}
+
+/* Holds the send column's width on ritual rows, which have no send arrow. */
+.bws-send-placeholder { display: block; }
+
+.bws-import-detail {
+  color: var(--bws-text-dim);
+  font-size: 10.5px;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bws-book-kind-icon {
+  color: var(--bws-text-dim);
+  font-size: 10px;
+  margin-right: 4px;
+}
+
+.bws-formula-book-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.bws-formula-header {
+  align-items: flex-end;
+  background: var(--bws-bg-raised);
+  border-bottom: 1px solid var(--bws-border);
+  display: flex;
+  flex: 0 0 auto;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.bws-formula-header .bws-field {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.bws-formula-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bws-formula-count { color: var(--bws-text-muted); font-size: 11px; }
+
+.bws-formula-target { color: var(--bws-text-dim); font-size: 10px; }
+.bws-formula-target.is-warning { color: #e0b64a; }
+
+.bws-formula-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.bws-formula-row {
+  grid-template-columns: minmax(0, 1fr) auto auto auto 30px;
+}
+
+.bws-formula-price {
+  color: var(--bws-text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.bws-known-tag {
+  align-items: center;
+  color: var(--bws-text-dim);
+  display: inline-flex;
+  font-size: 10px;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.bws-formula-row.is-known .bws-spell-name { color: var(--bws-text-muted); }
+
+.bws-teach:not(:disabled) { color: var(--bws-accent); }

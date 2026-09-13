@@ -11,6 +11,8 @@
  * the module keeps working across PF2e data-model shuffles.
  */
 
+import { BOOK_KINDS } from "./constants.js";
+
 /** @type {readonly string[]} The four PF2e magical traditions. */
 export const TRADITIONS = Object.freeze(["arcane", "divine", "occult", "primal"]);
 
@@ -32,7 +34,13 @@ export const RARITIES = Object.freeze(["common", "uncommon", "rare", "unique"]);
 /**
  * Cached compendium read. Building this is expensive (it loads every spell document
  * in every pack), so it is done once and reused for all subsequent filtering.
- * @type {{ spells: object[], packCount: number } | null}
+ *
+ * Rituals are kept in their own list rather than mixed into `spells`. Everything that
+ * fills a spell slot reads `spells` and must never see a ritual; the ritual book side
+ * of the module reads `rituals` and wants nothing else. One pass over the packs feeds
+ * both.
+ *
+ * @type {{ spells: object[], rituals: object[], packCount: number } | null}
  */
 let _cache = null;
 
@@ -154,6 +162,45 @@ export function getSpellSource(spell, fallback = "") {
 }
 
 /**
+ * Read a spell's slug.
+ *
+ * PF2e stamps a slug on every compendium spell, and copies it onto the owned item when
+ * a spell is added to an actor, so it is the most reliable way to recognise a sheet
+ * spell that has lost its compendium link. Falls back to an empty string rather than
+ * deriving one from the name: the caller already falls back to a name match.
+ *
+ * @param {object} spell A SpellPF2e document or raw spell source.
+ * @returns {string} Lower-cased slug, or an empty string.
+ */
+export function getSpellSlug(spell) {
+  const raw = spell?.system?.slug ?? spell?.slug ?? "";
+  return typeof raw === "string" ? raw.toLowerCase() : "";
+}
+
+/**
+ * Read the ritual-specific fields off a ritual spell.
+ *
+ * PF2e keeps these under `system.ritual`, with the cast time and cost living on the
+ * ordinary spell fields. Every one of them is optional in practice - third-party
+ * rituals often fill in only some - so each falls back to an empty value rather than
+ * to a guess.
+ *
+ * @param {object} spell A SpellPF2e document or raw spell source.
+ * @returns {{ castTime: string, cost: string, primaryCheck: string, secondaryCasters: number, secondaryChecks: string }}
+ */
+export function getRitualDetails(spell) {
+  const ritual = spell?.system?.ritual ?? {};
+  const casters = Number(ritual?.secondary?.casters);
+  return {
+    castTime: String(spell?.system?.time?.value ?? "").trim(),
+    cost: String(spell?.system?.cost?.value ?? "").trim(),
+    primaryCheck: String(ritual?.primary?.check ?? "").trim(),
+    secondaryCasters: Number.isFinite(casters) ? casters : 0,
+    secondaryChecks: String(ritual?.secondary?.checks ?? "").trim()
+  };
+}
+
+/**
  * Read a spell's category slug (`spell`, `focus`, `ritual`, ...).
  * @param {object} spell A SpellPF2e document or raw spell source.
  * @returns {string} Lower-cased category slug, or an empty string.
@@ -248,6 +295,7 @@ export function getRarityLabel(rarity) {
  * @returns {object} Normalised spell record.
  */
 function normaliseSpell(spell, pack) {
+  const ritual = isRitual(spell);
   const rank = isCantrip(spell) ? 0 : getSpellRank(spell);
   const traditions = getSpellTraditions(spell);
   const rarity = getSpellRarity(spell);
@@ -262,6 +310,9 @@ function normaliseSpell(spell, pack) {
     // just the sources a table actually owns.
     sourceKey: sourceKey(sourceLabel),
     sourceLabel,
+    // Carried so an actor's spell can be matched back to its compendium original even
+    // when the item has lost its source id.
+    slug: getSpellSlug(spell),
     name: spell.name,
     img: spell.img,
     rank,
@@ -279,7 +330,9 @@ function normaliseSpell(spell, pack) {
     // Pre-localised for the row pill, like `traditionTags` above.
     rarityLabel: getRarityLabel(rarity),
     isFocus: isFocusSpell(spell),
-    isRitual: isRitual(spell),
+    isRitual: ritual,
+    // Only rituals carry this, so a spell record stays exactly the shape it was.
+    ...(ritual ? { ritual: getRitualDetails(spell) } : {}),
     isCantrip: rank === 0,
     action: getActionCost(spell),
     // Pre-lowered once so filtering does not re-allocate per keystroke.
@@ -290,11 +343,14 @@ function normaliseSpell(spell, pack) {
 /**
  * Load and cache every spell in every Item compendium pack.
  *
+ * Rituals are split off into their own list here, which is why callers that fill spell
+ * slots can use the returned `spells` without filtering: it never contains one.
+ *
  * @param {object} [options]
  * @param {boolean} [options.force=false] Bypass the cache and re-read the packs.
- * @returns {Promise<{ spells: object[], packCount: number }>}
+ * @returns {Promise<{ spells: object[], rituals: object[], packCount: number }>}
  */
-export async function loadAllSpells({ force = false } = {}) {
+async function loadCompendiumSpells({ force = false } = {}) {
   if (force) invalidateSpellCache();
   if (_cache) return _cache;
   if (_loading) return _loading;
@@ -318,22 +374,25 @@ export async function loadAllSpells({ force = false } = {}) {
 
       const seen = new Set();
       const spells = [];
+      const rituals = [];
       for (const spell of results.flat()) {
-        // Rituals never occupy a slot, so they are dropped at the source. The flag is
-        // read off the normalised record, which carries no `system` object.
-        if (spell.isRitual) continue;
         if (seen.has(spell.uuid)) continue;
         seen.add(spell.uuid);
-        spells.push(spell);
+        // Rituals never occupy a slot, so they are held apart from everything that
+        // fills one. The flag is read off the normalised record, which carries no
+        // `system` object.
+        (spell.isRitual ? rituals : spells).push(spell);
       }
 
-      spells.sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name));
-      _cache = { spells, packCount: packs.length };
+      const byRankThenName = (a, b) => a.rank - b.rank || a.name.localeCompare(b.name);
+      spells.sort(byRankThenName);
+      rituals.sort(byRankThenName);
+      _cache = { spells, rituals, packCount: packs.length };
       return _cache;
     } catch (err) {
       console.error("Blizzard's Wondrous Spellbook | Spell query failed", err);
       ui.notifications.error(game.i18n.localize("BWS.Error.QueryFailed"));
-      _cache = { spells: [], packCount: 0 };
+      _cache = { spells: [], rituals: [], packCount: 0 };
       return _cache;
     } finally {
       _loading = null;
@@ -341,6 +400,33 @@ export async function loadAllSpells({ force = false } = {}) {
   })();
 
   return _loading;
+}
+
+/**
+ * Every slot-fillable spell in the world's compendiums.
+ *
+ * The returned list never contains a ritual, which is what every caller that writes to
+ * a spellcasting slot relies on.
+ *
+ * @param {object} [options]
+ * @param {boolean} [options.force=false] Bypass the cache and re-read the packs.
+ * @returns {Promise<{ spells: object[], packCount: number }>}
+ */
+export async function loadAllSpells(options = {}) {
+  const { spells, packCount } = await loadCompendiumSpells(options);
+  return { spells, packCount };
+}
+
+/**
+ * Every ritual in the world's compendiums.
+ *
+ * @param {object} [options]
+ * @param {boolean} [options.force=false] Bypass the cache and re-read the packs.
+ * @returns {Promise<{ rituals: object[], packCount: number }>}
+ */
+export async function loadAllRituals(options = {}) {
+  const { rituals, packCount } = await loadCompendiumSpells(options);
+  return { rituals, packCount };
 }
 
 /**
@@ -373,6 +459,8 @@ export async function listSpellSources() {
  * @param {string} [options.search=""] Case-insensitive match against name and traits.
  * @param {number[]|null} [options.ranks=null] Ranks to keep, 0 for cantrips. Empty or null
  *   means every rank, so callers that do not care about rank can omit it entirely.
+ * @param {string} [options.kind="spells"] `spells` to search what can fill a slot, or
+ *   `rituals` to search rituals instead. The two pools never overlap.
  * @returns {Promise<{ groups: object[], shown: number, indexed: number, packCount: number }>}
  *   `groups` is sorted by rank ascending, each with its own name-sorted `spells` array.
  */
@@ -380,9 +468,13 @@ export async function querySpells({
   tradition = "all",
   includeFocus = false,
   search = "",
-  ranks = null
+  ranks = null,
+  kind = BOOK_KINDS.SPELLS
 } = {}) {
-  const { spells, packCount } = await loadAllSpells();
+  const cache = await loadCompendiumSpells();
+  const { packCount } = cache;
+  const isRituals = kind === BOOK_KINDS.RITUALS;
+  const spells = isRituals ? cache.rituals : cache.spells;
   const needle = search.trim().toLowerCase();
   // Built once rather than per-spell: the predicate below runs over every indexed spell.
   const rankSet = Array.isArray(ranks) && ranks.length ? new Set(ranks.map(Number)) : null;
@@ -390,7 +482,8 @@ export async function querySpells({
   const filtered = spells.filter((spell) => {
     // Cheapest discriminator first; `normaliseSpell` already folds cantrips down to rank 0.
     if (rankSet && !rankSet.has(spell.rank)) return false;
-    if (!includeFocus && spell.isFocus) return false;
+    // No ritual is a focus spell, so the toggle has nothing to say about that pool.
+    if (!isRituals && !includeFocus && spell.isFocus) return false;
     if (tradition !== "all" && !spell.traditions.includes(tradition)) return false;
     if (needle && !spell.searchKey.includes(needle)) return false;
     return true;

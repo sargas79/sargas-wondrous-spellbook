@@ -9,11 +9,21 @@
  * A spellbook is storage only. Ticking a spell adds it to the book; the row's
  * "send to slot" arrow is a separate, immediate write to an actor and does not
  * require the book to be saved first.
+ *
+ * The same window builds ritual books: the kind switch points the query at the ritual
+ * pool instead, and a book records which of the two it holds. The two never mix, so
+ * switching kinds clears whatever was ticked.
  */
 
-import { MODULE_ID, template } from "./constants.js";
+import { BOOK_KINDS, MODULE_ID, template } from "./constants.js";
 import { TRADITIONS, RANKS, querySpells, getRankBadge, getRankLabel } from "./spell-query.js";
-import { canEditSpellbook, createSpellbook, getStoredSpells, updateSpellbook } from "./persistence.js";
+import {
+  canEditSpellbook,
+  createSpellbook,
+  getBookKind,
+  getStoredSpells,
+  updateSpellbook
+} from "./persistence.js";
 import { openSendToSlotDialog } from "./slot-manager.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -28,6 +38,31 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     /** @type {object|null} The spellbook being edited, if any. */
     this.journal = options.journal ?? null;
+
+    /** @type {string|null} Kind of the book being edited, if any. */
+    const journalKind = this.journal ? getBookKind(this.journal) : null;
+
+    /**
+     * A formula book holds items, not spells, so this window cannot edit one. The
+     * browser routes those to the crafter's reader instead; this guard only catches a
+     * caller reaching past it through the API.
+     * @type {boolean}
+     */
+    this.unsupportedBook = journalKind === BOOK_KINDS.FORMULAS;
+    if (this.unsupportedBook) ui.notifications.warn(game.i18n.localize("BWS.Creator.NotEditable"));
+
+    /**
+     * Which pool this book draws from: spells, or rituals. An existing book's kind wins
+     * over anything passed in - a book cannot change what it holds.
+     * @type {string}
+     */
+    this.kind =
+      journalKind === BOOK_KINDS.RITUALS || (!this.journal && options.kind === BOOK_KINDS.RITUALS)
+        ? BOOK_KINDS.RITUALS
+        : BOOK_KINDS.SPELLS;
+
+    /** @type {boolean} True when the kind switch must not be offered. */
+    this.kindLocked = !!this.journal;
 
     /** @type {string} */
     this.spellbookName = this.journal?.name ?? "";
@@ -58,7 +93,7 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
     for (const spell of getStoredSpells(this.journal)) this.selected.set(spell.uuid, spell);
 
     /** @type {boolean} True when the user may not write to this spellbook. */
-    this.readOnly = !!this.journal && !canEditSpellbook(this.journal);
+    this.readOnly = this.unsupportedBook || (!!this.journal && !canEditSpellbook(this.journal));
 
     this._debouncedSearch = foundry.utils.debounce(() => {
       this.render({ parts: ["body", "footer"] });
@@ -77,6 +112,7 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
     },
     position: { width: 900, height: 640 },
     actions: {
+      setKind: SpellbookApp.#onSetKind,
       setTradition: SpellbookApp.#onSetTradition,
       setRank: SpellbookApp.#onSetRank,
       sendToSlot: SpellbookApp.#onSendToSlot,
@@ -95,7 +131,8 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** @inheritdoc */
   get title() {
-    return this.journal ? `${game.i18n.localize("BWS.Creator.Title")}: ${this.journal.name}` : super.title;
+    const base = game.i18n.localize(`BWS.Creator.Title.${this.kind}`);
+    return this.journal ? `${base}: ${this.journal.name}` : base;
   }
 
   /** @inheritdoc */
@@ -104,7 +141,8 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
       tradition: this.tradition,
       includeFocus: this.includeFocus,
       search: this.search,
-      ranks: [...this.ranks]
+      ranks: [...this.ranks],
+      kind: this.kind
     });
 
     // Mark rows that are already in the book so the checkbox renders ticked.
@@ -120,8 +158,23 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
       .sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name))
       .map((spell) => ({ ...spell, rankBadge: getRankBadge(spell.rank) }));
 
+    const isRituals = this.kind === BOOK_KINDS.RITUALS;
+
     return {
       ...(await super._prepareContext(options)),
+      kind: this.kind,
+      isRituals,
+      kindLocked: this.kindLocked,
+      kinds: [BOOK_KINDS.SPELLS, BOOK_KINDS.RITUALS].map((key) => ({
+        key,
+        label: game.i18n.localize(`BWS.Kind.${key}`),
+        active: key === this.kind
+      })),
+      nameLabel: game.i18n.localize(`BWS.Creator.NameLabel.${this.kind}`),
+      saveLabel: game.i18n.localize(`BWS.Creator.Save.${this.kind}`),
+      emptyNote: game.i18n.localize(
+        isRituals ? "BWS.Ritual.SelectedEmpty" : "BWS.Creator.SelectedEmpty"
+      ),
       spellbookName: this.spellbookName,
       tradition: this.tradition,
       traditions: [
@@ -255,6 +308,25 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
     return partContext;
   }
 
+  /**
+   * Switch between building a spellbook and building a ritual book.
+   *
+   * The selection is dropped rather than carried across: a book holds one kind, and
+   * silently keeping spells ticked while the list shows rituals would save a book that
+   * does not match what is on screen.
+   */
+  static async #onSetKind(event, target) {
+    const kind = target.dataset.kind === BOOK_KINDS.RITUALS ? BOOK_KINDS.RITUALS : BOOK_KINDS.SPELLS;
+    if (this.kindLocked || kind === this.kind) return;
+
+    if (this.selected.size) {
+      ui.notifications.info(game.i18n.localize("BWS.Creator.KindSwitchCleared"));
+      this.selected.clear();
+    }
+    this.kind = kind;
+    await this.render({ parts: ["header", "body", "footer"] });
+  }
+
   /** Switch the tradition filter. */
   static async #onSetTradition(event, target) {
     this.tradition = target.dataset.tradition ?? "all";
@@ -323,7 +395,7 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const spells = [...this.selected.values()];
     const result = this.journal
       ? await updateSpellbook(this.journal, { name, spells })
-      : await createSpellbook({ name, spells });
+      : await createSpellbook({ name, spells, kind: this.kind });
 
     if (!result) return;
 

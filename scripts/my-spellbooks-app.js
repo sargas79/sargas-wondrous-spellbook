@@ -1,17 +1,32 @@
 /**
  * The "My Spellbooks" browser.
  *
- * Lists the spellbooks in the module's folder, filtered by ownership: a GM sees every
- * book, a player sees only the ones they own. Edit and delete controls are disabled
- * per-row for anyone who lacks OWNER on that specific entry.
+ * Lists every book the module knows about, filtered by ownership: a GM sees every book,
+ * a player sees only the ones they own. Edit and delete controls are disabled per-row
+ * for anyone who lacks OWNER on that specific entry.
+ *
+ * Rows are sorted into one alphabetical list across two axes that are deliberately kept
+ * apart. `kind` is where a book is *stored* - a journal, or a rolled loot item - and is
+ * what every action handler dispatches on. `bookKind` is what a journal *holds*, and
+ * decides which window its edit control opens: the creator for spells and rituals, the
+ * crafter's reader for formulas.
  */
 
-import { MODULE_ID, template } from "./constants.js";
-import { deleteSpellbook, getFolderName, getUserSpellbooks, summariseSpellbook } from "./persistence.js";
+import { BOOK_KINDS, MODULE_ID, template } from "./constants.js";
+import {
+  deleteSpellbook,
+  getBookKind,
+  getFolderName,
+  getUserSpellbooks,
+  summariseSpellbook
+} from "./persistence.js";
 import { SpellbookApp } from "./spellbook-app.js";
 import { LootGeneratorApp } from "./loot-generator-app.js";
 import { getUserLootBooks, isLootSpellbook, summariseLootBook } from "./loot-generator.js";
 import { openLootBook } from "./loot-book-app.js";
+import { openImport } from "./import-app.js";
+import { listImportableActors } from "./import-spells.js";
+import { openFormulaBook } from "./formula-book-app.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -29,6 +44,7 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
     position: { width: 460, height: 520 },
     actions: {
       create: MySpellbooksApp.#onCreate,
+      importSheet: MySpellbooksApp.#onImportSheet,
       rollLoot: MySpellbooksApp.#onRollLoot,
       open: MySpellbooksApp.#onOpen,
       edit: MySpellbooksApp.#onEdit,
@@ -81,6 +97,19 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
     new SpellbookApp().render(true);
   }
 
+  /**
+   * Build a book out of what a character already has.
+   *
+   * Opens on the first kind this user has anything to import of, so a table whose only
+   * owned character is a crafter lands on Formulas instead of an empty spell list.
+   */
+  static async #onImportSheet() {
+    const kind =
+      Object.values(BOOK_KINDS).find((key) => listImportableActors({ kind: key }).length) ??
+      BOOK_KINDS.SPELLS;
+    openImport({ kind });
+  }
+
   /** Open the random loot spellbook generator. */
   static async #onRollLoot() {
     new LootGeneratorApp().render(true);
@@ -100,8 +129,13 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /**
-   * Reopen the creator seeded with an existing spellbook. A loot book is a physical
-   * item the creator cannot edit, so its own sheet is opened instead.
+   * Open a book with the window that suits it.
+   *
+   * Two independent questions decide that. Where the book is stored: a loot book is a
+   * physical item the creator cannot edit, so its own sheet is opened instead. And what
+   * a journal holds: a formula book holds items rather than spells, so the spell creator
+   * would render it as nonsense, and its reader is where formulas are taught to a
+   * crafter instead.
    */
   static async #onEdit(event, target) {
     if (target.dataset.kind === "loot") {
@@ -109,7 +143,10 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
       return;
     }
     const journal = game.journal.get(target.dataset.id);
-    if (journal) new SpellbookApp({ journal }).render(true);
+    if (!journal) return;
+
+    if (getBookKind(journal) === BOOK_KINDS.FORMULAS) openFormulaBook(journal);
+    else new SpellbookApp({ journal }).render(true);
   }
 
   /** Delete a spellbook, or a loot book item, after confirmation. */
