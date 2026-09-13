@@ -112,7 +112,9 @@ same sheet twice adds nothing the second time. Only books of the matching kind a
 Journal Entry.
 
 An owned spell is a copy rather than a reference, so each spell and ritual row is matched
-back to its compendium original — by source id, then slug, then name. One that matches
+back to its compendium original — by source id, then slug, then name. The book keeps the
+sheet's own name and icon, so a spell you renamed stays renamed; the compendium name is
+shown beside it in the list so you can see what the link points at. One that matches
 nothing (homebrew that lives only on that sheet) is marked **Unlinked**: it is still
 importable, but the book points at that character's own copy and stops resolving if the
 character is deleted. Formulas need no such matching: a PF2e formula is already stored as
@@ -129,8 +131,9 @@ that spell to another character carries the effect with it.
 A spellbook holds what can fill a spell slot, which is why rituals have never been part of
 one. They get their own book instead, built either way:
 
-- **From a sheet** — open the importer and switch to **Rituals**. A character's rituals live
-  in a ritual spellcasting entry, and that is what the list shows.
+- **From a sheet** — open the importer and switch to **Rituals**. PF2e keeps a character's
+  rituals on the Spellcasting tab's Rituals sub-tab rather than in a spellcasting entry,
+  and the list shows all of them in one group.
 - **From the compendiums** — open the Spellbook Creator and switch the **Book** segment from
   Spells to Rituals. The tradition filter, rank chips and search all still apply; the focus
   toggle disappears, since no ritual is a focus spell.
@@ -143,14 +146,18 @@ compendium is later uninstalled.
 A book is one kind or the other for life. Switching the creator's Book segment clears
 whatever is ticked, and reopening an existing book locks the switch to that book's kind.
 
+A ritual book is for keeping and reading rituals, not for filling slots: PF2e casts rituals
+outside spell slots, so ritual rows have no Send to Slot arrow, and the dialog refuses a
+ritual from any other route.
+
 ### Crafter's blueprints
 
 Open the importer, switch to **Formulas**, and the list shows the character's crafting
 formulas grouped by item level with the price and rarity of each. Save it and you get a
 formula book — the same kind of journal entry, listed in *My Spellbooks* alongside the rest.
 
-Opening a formula book (the hammer button on its row) gives you the reader: pick any crafter
-you own from the dropdown, and each row gets a **copy** button that writes that formula into
+Opening a formula book (the hammer button on its row) gives you the reader: pick any
+character you own from the dropdown — only characters have a formula list in PF2e, and each row gets a **copy** button that writes that formula into
 their sheet. Formulas the crafter already knows are marked *Known* and their buttons are
 disabled, so the book reads as a checklist of what is left to learn; **Copy N missing** does
 the whole remainder in one go. The book is never consumed, and adding a formula a character

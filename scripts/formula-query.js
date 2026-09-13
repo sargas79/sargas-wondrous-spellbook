@@ -222,6 +222,13 @@ export async function addFormulaToActor(actor, uuid) {
     ui.notifications.warn(game.i18n.format("BWS.Slot.NotOwner", { actor: actor?.name ?? "" }));
     return false;
   }
+  // Only a PF2e character has a formula list. An update to any other actor type - the
+  // world's Party actor, an NPC - resolves happily with the unknown key discarded, which
+  // would report a formula as added when nothing was stored.
+  if (!isCrafter(actor)) {
+    ui.notifications.warn(game.i18n.format("BWS.Formula.NotACrafter", { actor: actor.name }));
+    return false;
+  }
   if (actorKnowsFormula(actor, uuid)) return false;
 
   try {
@@ -236,11 +243,24 @@ export async function addFormulaToActor(actor, uuid) {
 }
 
 /**
+ * Can this actor hold crafting formulas at all?
+ * @param {object} actor An ActorPF2e.
+ * @returns {boolean}
+ */
+export function isCrafter(actor) {
+  return actor?.type === "character";
+}
+
+/**
  * Actors the current user could teach a formula to.
- * @returns {object[]} Owned Actor documents, sorted by name.
+ *
+ * Characters only: they are the one PF2e actor type with a formula list, and offering a
+ * Party or NPC actor here would put it in front of the user as a valid choice.
+ *
+ * @returns {object[]} Owned character Actor documents, sorted by name.
  */
 export function listCrafters() {
   return game.actors
-    .filter((actor) => actor.isOwner && actor.type !== "loot")
+    .filter((actor) => actor.isOwner && isCrafter(actor))
     .sort((a, b) => a.name.localeCompare(b.name));
 }

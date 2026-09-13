@@ -325,8 +325,13 @@ export async function collectActorSpells(actor, { kind = BOOK_KINDS.SPELLS } = {
 
     return {
       itemId: item.id,
-      name: match?.name ?? item.name,
-      img: match?.img ?? item.img,
+      // The sheet's own name and icon, not the compendium's: players rename spells, and
+      // a book that silently put the printed name back would lose that. The match still
+      // supplies the uuid, so the link resolves exactly as before.
+      name: item.name,
+      img: item.img,
+      // Shown alongside a renamed row so it is clear what the link points at.
+      ...(match && match.name !== item.name ? { sourceName: match.name } : {}),
       rank,
       rankBadge: getRankBadge(rank),
       traditions,
@@ -347,12 +352,12 @@ export async function collectActorSpells(actor, { kind = BOOK_KINDS.SPELLS } = {
           uuid: item.uuid,
           id: item.id,
           packId: "",
-          name: item.name,
-          img: item.img,
           rank,
           traditions,
           rarity
         }),
+        name: item.name,
+        img: item.img,
         ...(ritual ? { ritual } : {}),
         ...(animation ? { jb2aAnimation: animation } : {})
       })
@@ -373,13 +378,16 @@ export async function collectActorSpells(actor, { kind = BOOK_KINDS.SPELLS } = {
     });
   }
 
-  // Spells with no entry - or with a stale entry id - would otherwise be invisible.
+  // Spells with no entry - or with a stale entry id - would otherwise be invisible. In
+  // rituals mode this is the normal case rather than a leftover: PF2e casts rituals
+  // through a virtual entry that is not an item, so a sheet's rituals are never reached
+  // by the entry pass above and all land here.
   const loose = actor.itemTypes.spell.map(toRow).filter(Boolean);
   if (loose.length) {
     loose.sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name));
     groups.push({
       id: "",
-      name: game.i18n.localize("BWS.Import.LooseSpells"),
+      name: game.i18n.localize(wantRituals ? "BWS.Import.LooseRituals" : "BWS.Import.LooseSpells"),
       kind: "",
       tradition: "",
       spells: loose

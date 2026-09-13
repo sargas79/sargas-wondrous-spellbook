@@ -1047,11 +1047,14 @@ button.bws-anim-button {
   transition: opacity 120ms ease, color 120ms ease;
 }
 
-/* Revealed with the rest of the row's controls. The row is matched loosely because the
-   element PF2e hangs a spell off has changed shape before now; anything that is not a
-   row simply never contains this button. */
-li:hover > button.bws-anim-button,
-li:hover .bws-anim-host > button.bws-anim-button,
+/* Revealed with the rest of the row's controls. Every step from the hovered element is a
+   child combinator, and that is load-bearing: PF2e renders each spellcasting entry as an
+   `<li data-item-id>` wrapping all of its spell rows, so a descendant search from a
+   hovered `<li>` would light up every gear in the entry the moment the pointer touched
+   any one row. The row is keyed on `data-item-id` rather than a tag, and the button sits
+   either in the row's tagged control cluster or directly in the row. */
+[data-item-id]:hover > .bws-anim-host > button.bws-anim-button,
+[data-item-id]:hover > button.bws-anim-button,
 button.bws-anim-button:focus-visible {
   opacity: 1;
 }
@@ -1495,6 +1498,16 @@ button.bws-anim-button.is-set {
   gap: 10px;
   padding: 8px 12px 0;
 }
+
+/* The compendium name under a spell the sheet has renamed. */
+.bws-import-source-name {
+  color: var(--bws-text-dim);
+  font-size: 10px;
+  margin-left: 6px;
+}
+
+/* Holds the send column's width on ritual rows, which have no send arrow. */
+.bws-send-placeholder { display: block; }
 
 .bws-import-detail {
   color: var(--bws-text-dim);

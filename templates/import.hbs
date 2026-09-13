@@ -80,7 +80,10 @@
                      {{#if selected}}checked{{/if}} />
             </span>
             <span class="bws-rank-badge">{{rankBadge}}</span>
-            <span class="bws-spell-name" title="{{name}}">{{name}}</span>
+            <span class="bws-spell-name" title="{{name}}{{#if sourceName}} ({{sourceName}}){{/if}}">
+              {{name}}
+              {{#if sourceName}}<span class="bws-import-source-name">{{sourceName}}</span>{{/if}}
+            </span>
 
             {{#if isFormula}}
               <span class="bws-import-detail" title="{{price}}">{{price}}</span>

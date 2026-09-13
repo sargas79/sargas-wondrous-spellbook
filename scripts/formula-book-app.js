@@ -11,7 +11,7 @@
  */
 
 import { BOOK_KINDS, template } from "./constants.js";
-import { actorKnowsFormula, addFormulaToActor, listCrafters } from "./formula-query.js";
+import { actorKnowsFormula, addFormulaToActor, isCrafter, listCrafters } from "./formula-query.js";
 import { getRarityLabel } from "./spell-query.js";
 import { canEditSpellbook, getBookKind, getStoredSpells } from "./persistence.js";
 import { resolveTargetActor } from "./slot-manager.js";
@@ -35,11 +35,14 @@ export class FormulaBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /**
    * Who is reading the book: the selected token or assigned character when either is a
-   * crafter this user owns, otherwise the first owned actor.
+   * crafter this user owns, otherwise the first owned character. A selected NPC token is
+   * passed over rather than defaulted to, since it cannot learn a formula.
    * @returns {object|null}
    */
   static #resolveDefaultCrafter() {
-    return resolveTargetActor()?.actor ?? listCrafters()[0] ?? null;
+    const resolved = resolveTargetActor()?.actor ?? null;
+    if (isCrafter(resolved)) return resolved;
+    return listCrafters()[0] ?? null;
   }
 
   /** @inheritdoc */
@@ -160,6 +163,12 @@ export class FormulaBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
   /** Copy every formula the crafter does not already know. */
   static async #onTeachAll() {
     if (!this.actor) return;
+    // Checked once up front: `addFormulaToActor` refuses a non-character too, but inside
+    // the loop that would repeat the same warning for every formula in the book.
+    if (!isCrafter(this.actor)) {
+      ui.notifications.warn(game.i18n.format("BWS.Formula.NotACrafter", { actor: this.actor.name }));
+      return;
+    }
 
     const missing = getStoredSpells(this.journal).filter(
       (record) => !actorKnowsFormula(this.actor, record.uuid)
