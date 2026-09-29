@@ -18,6 +18,7 @@
 import { BOOK_KINDS, MODULE_ID, template } from "./constants.js";
 import { TRADITIONS, RANKS, querySpells, getRankBadge, getRankLabel } from "./spell-query.js";
 import {
+  canCreateSpellbook,
   canEditSpellbook,
   createSpellbook,
   getBookKind,
@@ -25,6 +26,7 @@ import {
   updateSpellbook
 } from "./persistence.js";
 import { openSendToSlotDialog } from "./slot-manager.js";
+import { domSafe, openOrFocus } from "./app-utils.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -34,7 +36,12 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
    * @param {object} [options.journal] An existing spellbook JournalEntry to edit.
    */
   constructor(options = {}) {
-    super(options);
+    // One window per book being edited, so reopening a book focuses its window; a new,
+    // unsaved book gets a fresh id each time and several can be drafted side by side.
+    super({
+      ...options,
+      ...(options.journal ? { id: SpellbookApp.idFor(options.journal) } : {})
+    });
 
     /** @type {object|null} The spellbook being edited, if any. */
     this.journal = options.journal ?? null;
@@ -95,18 +102,44 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
     /** @type {boolean} True when the user may not write to this spellbook. */
     this.readOnly = this.unsupportedBook || (!!this.journal && !canEditSpellbook(this.journal));
 
+    /** @type {boolean} True when this user may build a book but has no right to save a new one. */
+    this.cannotCreate = !this.journal && !canCreateSpellbook();
+
     this._debouncedSearch = foundry.utils.debounce(() => {
       this.render({ parts: ["body", "footer"] });
     }, 200);
   }
 
+  /**
+   * Window id for the creator editing a given book.
+   * @param {object} journal A spellbook JournalEntry.
+   * @returns {string}
+   */
+  static idFor(journal) {
+    return `bws-spellbook-creator-${domSafe(journal.id)}`;
+  }
+
+  /**
+   * Open the creator, focusing the existing window when that book is already open.
+   * @param {object} [options] Constructor options.
+   * @returns {SpellbookApp}
+   */
+  static open(options = {}) {
+    if (!options.journal) {
+      const app = new SpellbookApp(options);
+      app.render({ force: true });
+      return app;
+    }
+    return openOrFocus(SpellbookApp.idFor(options.journal), () => new SpellbookApp(options));
+  }
+
   /** @inheritdoc */
   static DEFAULT_OPTIONS = {
-    id: "bws-spellbook-creator",
+    id: "bws-spellbook-creator-{id}",
     classes: ["bws", "bws-creator"],
     tag: "div",
     window: {
-      title: "BWS.Creator.Title",
+      title: "BWS.Creator.Title.spells",
       icon: "fa-solid fa-book-open",
       resizable: true
     },
@@ -217,7 +250,8 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
           ? game.i18n.localize("BWS.Creator.SelectedCountOne")
           : game.i18n.format("BWS.Creator.SelectedCount", { count: selected.length }),
       readOnly: this.readOnly,
-      canSave: !this.readOnly && selected.length > 0 && !!this.spellbookName.trim(),
+      cannotCreate: this.cannotCreate,
+      canSave: !this.readOnly && !this.cannotCreate && selected.length > 0 && !!this.spellbookName.trim(),
       statusLine: game.i18n.format("BWS.Creator.StatusLine", {
         packs: query.packCount,
         indexed: query.indexed,
@@ -244,7 +278,7 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
       this.spellbookName = event.currentTarget.value;
       // Only the save button's disabled state depends on the name.
       const save = root.querySelector("[data-action='save']");
-      if (save) save.disabled = this.readOnly || !this.spellbookName.trim() || !this.selected.size;
+      if (save) save.disabled = this.readOnly || this.cannotCreate || !this.spellbookName.trim() || !this.selected.size;
     });
 
     bind("[name='search']", "input", (event) => {

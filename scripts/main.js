@@ -15,8 +15,9 @@ import { injectSheetControls, openSendToSlotDialog, resolveTargetActor } from ".
 import { getAnimationsAvailable, registerAnimationHooks } from "./animation-config.js";
 import { invalidateSpellCache, listSpellSources, querySpells } from "./spell-query.js";
 import { LootGeneratorApp } from "./loot-generator-app.js";
-import { ImportApp, injectImportButton, openImport } from "./import-app.js";
+import { ImportApp, addImportHeaderButton, injectImportButton, openImport } from "./import-app.js";
 import {
+  addLootBookHeaderButton,
   injectLootBookButton,
   openLootBook,
   registerLootBookContextMenu
@@ -146,7 +147,7 @@ function injectSceneControlButton(controls) {
     /* settings not registered yet - fall through and render the button */
   }
 
-  const open = () => new MySpellbooksApp().render(true);
+  const open = () => MySpellbooksApp.open();
   const tool = {
     name: TOOL_NAME,
     title: "BWS.ModuleTitle",
@@ -154,9 +155,8 @@ function injectSceneControlButton(controls) {
     visible: true,
     button: true,
     order: 100,
-    // v13 dispatches tool activation through `onChange`; v12 and earlier use
-    // `onClick`. Only one of the two is ever called, so both point at `open`.
-    onClick: open,
+    // v13+ dispatches a button tool through `onChange`. `onClick` is deprecated there,
+    // and core calls it as well as `onChange`, so setting both opened the window twice.
     onChange: open
   };
 
@@ -179,8 +179,8 @@ Hooks.once("init", () => {
   const api = {
     SpellbookApp,
     MySpellbooksApp,
-    openCreator: (options = {}) => new SpellbookApp(options).render(true),
-    openBrowser: () => new MySpellbooksApp().render(true),
+    openCreator: (options = {}) => SpellbookApp.open(options),
+    openBrowser: () => MySpellbooksApp.open(),
     sendToSlot: openSendToSlotDialog,
     resolveTargetActor,
     getAnimationsAvailable,
@@ -188,7 +188,7 @@ Hooks.once("init", () => {
     listSpellSources,
     invalidateSpellCache,
     LootGeneratorApp,
-    openLootGenerator: (options = {}) => new LootGeneratorApp(options).render(true),
+    openLootGenerator: (options = {}) => LootGeneratorApp.open(options),
     openLootBook,
     ImportApp,
     openImport,
@@ -217,48 +217,56 @@ Hooks.once("ready", () => {
   registerLootBookContextMenu();
 
   // The spell cache is built from compendium contents, so drop it when a pack changes.
-  Hooks.on("createItem", (item) => {
-    if (item.pack && item.type === "spell") invalidateSpellCache();
-  });
-  Hooks.on("deleteItem", (item) => {
-    if (item.pack && item.type === "spell") invalidateSpellCache();
-  });
+  for (const hook of ["createItem", "updateItem", "deleteItem"]) {
+    Hooks.on(hook, (item) => {
+      if (item.pack && item.type === "spell") invalidateSpellCache();
+    });
+  }
 
   console.log(`${MODULE_ID} | Ready`);
 });
 
 Hooks.on("getSceneControlButtons", injectSceneControlButton);
 
-// A loot spellbook is an ordinary physical item, so its sheet is PF2e's own. The
-// "open spellbook" control is injected on render instead of the sheet being subclassed.
-// ApplicationV2 fires a render hook for every class in the sheet's inheritance chain,
-// so both names are listened for and the injection de-duplicates itself.
-for (const hook of ["renderItemSheetPF2e", "renderPhysicalItemSheetPF2e"]) {
-  Hooks.on(hook, (app, html) => {
-    try {
-      injectLootBookButton(app, html);
-    } catch (err) {
-      console.error(`${MODULE_ID} | Loot spellbook sheet integration failed`, err);
-    }
-  });
+/**
+ * Run a sheet integration without letting its failure reach the sheet's own render.
+ * @param {string} what Short description for the console.
+ * @param {() => void} fn The integration.
+ * @returns {void}
+ */
+function guarded(what, fn) {
+  try {
+    fn();
+  } catch (err) {
+    console.error(`${MODULE_ID} | ${what} failed`, err);
+  }
 }
+
+// PF2e 8.x sheets are Application V1, whose header buttons are assembled through a
+// `get<Class>HeaderButtons` hook fired for every class in the sheet's inheritance chain.
+// The PF2e class names are used so each hook fires once per sheet: `ItemSheetPF2e` for
+// every PF2e item sheet, `CharacterSheetPF2e` for characters only.
+Hooks.on("getItemSheetPF2eHeaderButtons", (app, buttons) =>
+  guarded("Loot spellbook header button", () => addLootBookHeaderButton(app, buttons))
+);
+Hooks.on("getCharacterSheetPF2eHeaderButtons", (app, buttons) =>
+  guarded("Import header button", () => addImportHeaderButton(app, buttons))
+);
+
+// Application V2 fallbacks, for a PF2e release that moves these sheets to V2. Both
+// helpers return immediately for a V1 sheet, which the hooks above already served.
+Hooks.on("renderItemSheetPF2e", (app, html) =>
+  guarded("Loot spellbook sheet integration", () => injectLootBookButton(app, html))
+);
 
 // PF2e's character sheet render hook. Availability of JB2A/Sequencer is re-checked
 // inside the handler on every render, so toggling either module mid-session takes
-// effect without a reload.
+// effect without a reload. The setting gates the animation controls only: the import
+// button is not part of that integration and must not vanish with it.
 Hooks.on("renderCharacterSheetPF2e", (app, html) => {
-  if (!game.settings.get(MODULE_ID, SETTINGS.SHEET_INTEGRATION)) return;
-  try {
-    injectSheetControls(app, html);
-  } catch (err) {
-    console.error(`${MODULE_ID} | Character sheet integration failed`, err);
+  const root = html instanceof HTMLElement ? html : html?.[0];
+  if (game.settings.get(MODULE_ID, SETTINGS.SHEET_INTEGRATION)) {
+    guarded("Character sheet animation controls", () => injectSheetControls(app, root));
   }
-
-  // Kept in its own try block: the import button does not depend on JB2A or Sequencer,
-  // so an animation failure above must not take it down with it.
-  try {
-    injectImportButton(app, html);
-  } catch (err) {
-    console.error(`${MODULE_ID} | Spellbook import button injection failed`, err);
-  }
+  guarded("Import button injection", () => injectImportButton(app, root));
 });

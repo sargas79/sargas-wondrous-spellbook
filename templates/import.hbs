@@ -16,8 +16,8 @@
 
   <div class="bws-import-form">
     <div class="bws-field">
-      <label for="bws-import-actor">{{localize "BWS.Import.ActorLabel"}}</label>
-      <select id="bws-import-actor" name="actor" {{#unless hasActor}}disabled{{/unless}}>
+      <label for="{{partId}}-bws-import-actor">{{localize "BWS.Import.ActorLabel"}}</label>
+      <select id="{{partId}}-bws-import-actor" name="actor" {{#unless hasActor}}disabled{{/unless}}>
         {{#each actors}}
           <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
         {{/each}}
@@ -25,8 +25,8 @@
     </div>
 
     <div class="bws-field">
-      <label for="bws-import-target">{{localize "BWS.Import.TargetLabel"}}</label>
-      <select id="bws-import-target" name="target">
+      <label for="{{partId}}-bws-import-target">{{localize "BWS.Import.TargetLabel"}}</label>
+      <select id="{{partId}}-bws-import-target" name="target">
         {{#each targets}}
           <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
         {{/each}}
@@ -34,8 +34,8 @@
     </div>
 
     <div class="bws-field">
-      <label for="bws-import-name">{{localize "BWS.Import.NameLabel"}}</label>
-      <input id="bws-import-name" type="text" name="bookName" value="{{bookName}}"
+      <label for="{{partId}}-bws-import-name">{{localize "BWS.Import.NameLabel"}}</label>
+      <input id="{{partId}}-bws-import-name" type="text" name="bookName" value="{{bookName}}"
              placeholder="{{localize 'BWS.Creator.NamePlaceholder'}}"
              {{#if nameDisabled}}disabled{{/if}} />
     </div>

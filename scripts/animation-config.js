@@ -52,19 +52,27 @@ export function getAnimationPath(item) {
   return item?.getFlag?.(MODULE_ID, ANIMATION_FLAG) ?? "";
 }
 
+/** Most suggestions put into the datalist; the browser filters them as the user types. */
+const MAX_SUGGESTIONS = 3000;
+
 /**
  * Suggest Sequencer database paths for the autocomplete list.
+ *
+ * Read from Sequencer's flattened entry list, which holds full dotted paths such as
+ * `jb2a.fire_bolt.orange`. `getPathsUnder` returns only the next path segment, so the
+ * list built from it offered `jb2a.fire_bolt` and never a path that plays anything.
+ *
  * @param {string} [prefix="jb2a"] Database namespace to enumerate.
- * @returns {string[]} Up to 400 known paths, or an empty array if unavailable.
+ * @returns {string[]} Known full paths under the namespace, or an empty array.
  */
 function getSuggestedPaths(prefix = "jb2a") {
   try {
     const db = globalThis.Sequencer?.Database;
     if (!db) return [];
-    // getPathsUnder is the stable public accessor; fall back to the raw entry list.
-    const paths = db.getPathsUnder?.(prefix) ?? db.getEntry?.(prefix) ?? [];
-    if (!Array.isArray(paths)) return [];
-    return paths.slice(0, 400).map((p) => (p.startsWith(prefix) ? p : `${prefix}.${p}`));
+    const all = db.publicFlattenedSimpleEntries ?? db.publicFlattenedEntries ?? db.flattenedEntries;
+    if (!Array.isArray(all)) return [];
+    const namespace = `${prefix}.`;
+    return all.filter((path) => String(path).startsWith(namespace)).slice(0, MAX_SUGGESTIONS);
   } catch (err) {
     console.warn("Blizzard's Wondrous Spellbook | Could not read the Sequencer database", err);
     return [];
@@ -180,9 +188,12 @@ export async function setAnimationPath(item, path) {
   }
 }
 
+/** Roll option PF2e adds to a spell card's origin when the spell is actually cast. */
+const CAST_ROLL_OPTION = "origin:action:slug:cast-a-spell";
+
 /**
- * Recently played animations, keyed by item uuid, used to swallow duplicates when
- * both the PF2e cast hook and the chat-message fallback fire for one cast.
+ * Recently played animations, keyed by item uuid, used to swallow a card that is
+ * posted twice for one cast.
  * @type {Map<string, number>}
  */
 const _recentlyPlayed = new Map();
@@ -220,11 +231,9 @@ export async function playSpellAnimation(spell, actor = spell?.actor) {
   if (isDuplicate(spell.uuid)) return;
 
   try {
-    // Prefer a placed token; Sequencer needs something with a canvas position.
-    const target =
-      actor?.getActiveTokens?.(true, false)?.[0] ??
-      actor?.token?.object ??
-      canvas.tokens?.controlled?.[0];
+    // The caster's own placed token; Sequencer needs something with a canvas position.
+    // No fallback to the user's selection: that may be a different creature entirely.
+    const target = actor?.getActiveTokens?.(true, false)?.[0] ?? actor?.token?.object;
     if (!target) return;
 
     await new Sequence().effect().file(path).atLocation(target).play();
@@ -235,21 +244,14 @@ export async function playSpellAnimation(spell, actor = spell?.actor) {
 }
 
 /**
- * Register the spell-cast listeners that trigger animation playback.
+ * Register the spell-cast listener that triggers animation playback.
  *
- * PF2e's cast signal has moved between releases. `pf2e.castSpell` is the current
- * hook on PF2e 8.x; the chat-message listener below is a version-tolerant fallback
- * that reads the spell out of the cast card's origin flags. Both funnel through
- * `playSpellAnimation`, which de-duplicates so a single cast animates once.
+ * PF2e fires no dedicated cast hook (8.5.1 has none), but every cast posts a chat card
+ * whose `flags.pf2e.origin` names the spell item. That card is the signal, read here.
+ * `playSpellAnimation` still de-duplicates, so a card re-posted within a moment of the
+ * first does not animate twice.
  */
 export function registerAnimationHooks() {
-  Hooks.on("pf2e.castSpell", async (spell, options = {}) => {
-    // Signature has varied across PF2e releases; accept either argument order.
-    const resolvedSpell = spell?.type === "spell" ? spell : options?.spell;
-    const resolvedActor = resolvedSpell?.actor ?? (spell?.documentName === "Actor" ? spell : null);
-    if (resolvedSpell) await playSpellAnimation(resolvedSpell, resolvedActor);
-  });
-
   Hooks.on("createChatMessage", async (message) => {
     // Only the author plays their own animation, otherwise every client fires it.
     if (message.author?.id !== game.user.id) return;
@@ -258,6 +260,9 @@ export function registerAnimationHooks() {
     try {
       const origin = message.flags?.pf2e?.origin;
       if (origin?.type !== "spell" || !origin?.uuid) return;
+      // Sharing a spell to chat posts the same card. PF2e adds this roll option only
+      // when the spell is actually cast, so a description posted to chat stays quiet.
+      if (!origin.rollOptions?.includes(CAST_ROLL_OPTION)) return;
 
       const spell = await fromUuid(origin.uuid);
       if (!spell?.actor) return;

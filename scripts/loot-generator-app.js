@@ -25,10 +25,20 @@ import {
   maxRankForLevel,
   randomSeed
 } from "./loot-generator.js";
+import { openOrFocus } from "./app-utils.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 export class LootGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) {
+  /**
+   * Open the generator, focusing it when it is already open.
+   * @param {object} [options] Constructor options, used only for a new window.
+   * @returns {LootGeneratorApp}
+   */
+  static open(options = {}) {
+    return openOrFocus(LootGeneratorApp.DEFAULT_OPTIONS.id, () => new LootGeneratorApp(options));
+  }
+
   /**
    * @param {object} [options] Standard ApplicationV2 options. Any of `level`,
    *   `tradition`, `profile` and `seed` seed the form.

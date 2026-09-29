@@ -87,6 +87,8 @@
         <i class="fa-solid fa-lock"></i>
         {{#if readOnly}}
           {{localize "BWS.Creator.ReadOnlyNote"}}
+        {{else if cannotCreate}}
+          {{localize "BWS.Error.NoJournalCreate"}}
         {{else}}
           {{localize "BWS.Creator.OwnershipNote"}}
         {{/if}}

@@ -21,6 +21,8 @@ import {
   listImportableActors
 } from "./import-spells.js";
 import { resolveTargetActor } from "./slot-manager.js";
+import { injectHeaderControl } from "./app-utils.js";
+import { canCreateSpellbook } from "./persistence.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -78,11 +80,11 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** @inheritdoc */
   static DEFAULT_OPTIONS = {
-    id: "bws-import",
+    id: "bws-import-{id}",
     classes: ["bws", "bws-import"],
     tag: "div",
     window: {
-      title: "BWS.Import.Title",
+      title: "BWS.Import.Title.spells",
       icon: "fa-solid fa-file-import",
       resizable: true
     },
@@ -163,7 +165,7 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
       emptyTitle: game.i18n.localize(`BWS.Import.Empty.${this.kind}`),
       emptyHint: game.i18n.localize(`BWS.Import.EmptyHint.${this.kind}`),
       noActorsLine: game.i18n.localize(`BWS.Import.NoActors.${this.kind}`),
-      canImport: this.selection.size > 0 && (!!journal || !!this.bookName.trim()),
+      canImport: this.selection.size > 0 && (!!journal || (!!this.bookName.trim() && canCreateSpellbook())),
       importLabel: journal
         ? game.i18n.localize("BWS.Import.SubmitMerge")
         : game.i18n.localize(`BWS.Import.Submit.${this.kind}`)
@@ -221,6 +223,10 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     if (this.data?.missing) {
       parts.push(game.i18n.format("BWS.Import.MissingNote", { count: this.data.missing }));
+    }
+    // Merging into a book the user owns is still open to them; only a new book is not.
+    if (!this.targetId && !canCreateSpellbook()) {
+      parts.push(game.i18n.localize("BWS.Error.NoJournalCreate"));
     }
     return parts.join(" ");
   }
@@ -340,7 +346,7 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const button = root.querySelector("[data-action='import']");
     if (button) {
-      const named = !!this.targetId || !!this.bookName.trim();
+      const named = !!this.targetId || (!!this.bookName.trim() && canCreateSpellbook());
       button.disabled = !this.selection.size || !named;
     }
   }
@@ -449,48 +455,74 @@ export function openImport({ actor, kind = BOOK_KINDS.SPELLS } = {}) {
   }
 
   const app = new ImportApp({ actor: target ?? undefined, kind });
-  app.render(true);
+  app.render({ force: true });
   return app;
 }
 
 /**
- * Add an import button to a character sheet's header.
+ * The kind a sheet's import should open on: whatever the character actually has.
  *
- * Injected on render rather than registered as a sheet header control, because the PF2e
- * character sheet is not this module's to subclass - the same approach the loot book
- * reader takes on the item sheet.
+ * Read at click time rather than when the sheet first rendered, so a character who
+ * gained spells since opening their sheet lands on them.
  *
- * @param {object} app The rendered CharacterSheetPF2e application.
- * @param {HTMLElement|object} html The sheet's root element, or a jQuery wrapper.
+ * @param {object} actor The character.
+ * @returns {string} One of {@link BOOK_KINDS}.
+ */
+function pickImportKind(actor) {
+  const spells = actor.itemTypes?.spell ?? [];
+  if (spells.some((spell) => !spell.isRitual)) return BOOK_KINDS.SPELLS;
+  if (spells.length) return BOOK_KINDS.RITUALS;
+  if ((actor.system?.crafting?.formulas?.length ?? 0) > 0) return BOOK_KINDS.FORMULAS;
+  return BOOK_KINDS.SPELLS;
+}
+
+/** Shared description of the sheet's import control. */
+const IMPORT_CONTROL = Object.freeze({
+  cssClass: "bws-import-spells",
+  icon: "fa-solid fa-book-medical",
+  label: "BWS.Import.SheetButtonLabel",
+  tooltip: "BWS.Import.SheetButton"
+});
+
+/**
+ * Add the import control to an Application V1 character sheet's header buttons.
+ *
+ * Registered on `getCharacterSheetPF2eHeaderButtons`, the hook V1 fires while it builds
+ * the header, so the button is a native header control rather than markup pushed into
+ * a header that is rebuilt on its own schedule. Shown on every sheet its viewer owns;
+ * the importer explains when there is nothing to take.
+ *
+ * @param {object} app The CharacterSheetPF2e being rendered.
+ * @param {object[]} buttons The header buttons being assembled.
+ * @returns {void}
+ */
+export function addImportHeaderButton(app, buttons) {
+  const actor = app?.actor;
+  if (!actor?.isOwner || buttons.some((b) => b.class === IMPORT_CONTROL.cssClass)) return;
+  buttons.unshift({
+    label: IMPORT_CONTROL.label,
+    class: IMPORT_CONTROL.cssClass,
+    icon: IMPORT_CONTROL.icon,
+    tooltip: IMPORT_CONTROL.tooltip,
+    onclick: () => openImport({ actor, kind: pickImportKind(actor) })
+  });
+}
+
+/**
+ * Add the import control to an Application V2 character sheet's header.
+ *
+ * Only for a PF2e release that has moved the sheet to V2, which has no header-button
+ * hook of the V1 kind. A V1 sheet is handled by {@link addImportHeaderButton}.
+ *
+ * @param {object} app The rendered character sheet.
+ * @param {HTMLElement} html The sheet's root element.
  * @returns {void}
  */
 export function injectImportButton(app, html) {
   const actor = app?.actor;
   if (!actor?.isOwner) return;
-
-  // Nothing to import from a sheet with neither spells nor formulas; the button appears
-  // once the character has either.
-  const hasSpells = (actor.itemTypes?.spell?.length ?? 0) > 0;
-  const hasFormulas = (actor.system?.crafting?.formulas?.length ?? 0) > 0;
-  if (!hasSpells && !hasFormulas) return;
-
-  const root = html instanceof HTMLElement ? html : html?.[0];
-  const frame = root?.closest?.(".application, .app") ?? root;
-  const header = frame?.querySelector?.(".window-header");
-  if (!header || header.querySelector(".bws-import-spells")) return;
-
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "header-control icon fa-solid fa-book-medical bws-import-spells";
-  button.dataset.tooltip = game.i18n.localize("BWS.Import.SheetButton");
-  button.setAttribute("aria-label", game.i18n.localize("BWS.Import.SheetButton"));
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    // Open on whichever kind this sheet actually has something of.
-    openImport({ actor, kind: hasSpells ? BOOK_KINDS.SPELLS : BOOK_KINDS.FORMULAS });
+  injectHeaderControl(app, html, {
+    ...IMPORT_CONTROL,
+    onClick: () => openImport({ actor, kind: pickImportKind(actor) })
   });
-
-  const close = header.querySelector("[data-action='close'], .close");
-  header.insertBefore(button, close ?? null);
 }

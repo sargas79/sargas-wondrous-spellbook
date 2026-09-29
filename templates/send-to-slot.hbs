@@ -11,8 +11,8 @@
 
   <div class="bws-slot-fields">
     <div class="bws-field">
-      <label for="bws-slot-entry">{{localize "BWS.Slot.EntryLabel"}}</label>
-      <select id="bws-slot-entry" name="entry">
+      <label for="{{uid}}-entry">{{localize "BWS.Slot.EntryLabel"}}</label>
+      <select id="{{uid}}-entry" name="entry">
         {{#each entries}}
           <option value="{{id}}">{{name}}{{#if kind}} ({{kind}}){{/if}}</option>
         {{/each}}
@@ -20,10 +20,10 @@
     </div>
 
     <div class="bws-field">
-      <label for="bws-slot-rank">{{localize "BWS.Slot.RankLabel"}}</label>
-      <select id="bws-slot-rank" name="rank" {{#if isCantrip}}disabled{{/if}}>
+      <label for="{{uid}}-rank">{{localize "BWS.Slot.RankLabel"}}</label>
+      <select id="{{uid}}-rank" name="rank" {{#if rankLocked}}disabled{{/if}}>
         {{#each ranks}}
-          <option value="{{rank}}" {{#if disabled}}disabled{{/if}}>{{label}}</option>
+          <option value="{{rank}}" {{#if disabled}}disabled{{/if}}>{{label}}{{#if freeLabel}} ({{freeLabel}}){{/if}}</option>
         {{/each}}
       </select>
     </div>
