@@ -47,6 +47,23 @@ let _cache = null;
 /** In-flight load, so concurrent callers share one pass over the packs. */
 let _loading = null;
 
+/**
+ * Compendium index fields read by {@link normaliseSpell}. Whole sub-objects are named
+ * rather than single leaves so every fallback path in the accessors below still finds
+ * its data on an index entry.
+ */
+const INDEX_FIELDS = Object.freeze([
+  "system.level",
+  "system.traits",
+  "system.category",
+  "system.ritual",
+  "system.time",
+  "system.cost",
+  "system.publication",
+  "system.source",
+  "system.slug"
+]);
+
 /** Clear the cached compendium read. Call when packs change. */
 export function invalidateSpellCache() {
   _cache = null;
@@ -217,7 +234,11 @@ export function getSpellCategory(spell) {
  */
 export function isFocusSpell(spell) {
   if (typeof spell?.isFocusSpell === "boolean") return spell.isFocusSpell;
-  return getSpellCategory(spell) === "focus" || getSpellTraits(spell).includes("focus");
+  if (getSpellCategory(spell) === "focus" || getSpellTraits(spell).includes("focus")) return true;
+  // PF2e's own rule: a cantrip that belongs to no tradition is a focus cantrip, such as
+  // a bard's compositions. Raw data and index entries have no getter to say so.
+  const traditions = spell?.system?.traits?.traditions;
+  return Array.isArray(traditions) && traditions.length === 0 && isCantrip(spell);
 }
 
 /**
@@ -290,7 +311,7 @@ export function getRarityLabel(rarity) {
 
 /**
  * Reduce a spell document to the flat shape the templates and journal flags use.
- * @param {object} spell A SpellPF2e document.
+ * @param {object} spell A SpellPF2e document or compendium index entry.
  * @param {object} pack The compendium collection the spell came from.
  * @returns {object} Normalised spell record.
  */
@@ -303,7 +324,8 @@ function normaliseSpell(spell, pack) {
   const sourceLabel = getSpellSource(spell, packLabel);
   return {
     uuid: spell.uuid,
-    id: spell.id,
+    // Compendium index entries carry `_id`; documents expose `id`.
+    id: spell.id ?? spell._id,
     packId: pack?.collection ?? "",
     packLabel,
     // Which book the spell was printed in, so the loot generator can be pointed at
@@ -362,8 +384,14 @@ async function loadCompendiumSpells({ force = false } = {}) {
       const results = await Promise.all(
         packs.map(async (pack) => {
           try {
-            const docs = await pack.getDocuments({ type: "spell" });
-            return docs.map((doc) => normaliseSpell(doc, pack));
+            // The index, not the documents: building every spell document in every
+            // pack took several seconds on first open. The index carries only the
+            // fields named here, which is everything `normaliseSpell` reads; a spell's
+            // full document is fetched by uuid only when it is sent to an actor.
+            const index = await pack.getIndex({ fields: INDEX_FIELDS });
+            return index
+              .filter((entry) => entry.type === "spell")
+              .map((entry) => normaliseSpell(entry, pack));
           } catch (err) {
             // One unreadable pack must not sink the whole query.
             console.warn(`Blizzard's Wondrous Spellbook | Skipped pack ${pack.collection}`, err);

@@ -567,21 +567,18 @@ export function isLootSpellbook(item) {
 /**
  * List the world loot spellbooks the current user may see.
  *
- * Mirrors `getUserSpellbooks`: the books live in the configured Item folder, a GM sees
- * every one of them and a player sees the ones they have at least OBSERVER on, which is
- * what the reader needs to let them learn a spell. Copies embedded on an actor are not
- * world items and stay on that actor's sheet.
+ * Mirrors `getUserSpellbooks`: a book is recognised by its flag wherever it is filed,
+ * so renaming the folder setting or moving a book into a treasure folder does not hide
+ * it. A GM sees every one of them and a player sees the ones they have at least
+ * OBSERVER on, which is what the reader needs to let them learn a spell. Copies
+ * embedded on an actor are not world items and stay on that actor's sheet.
  *
  * @returns {object[]} Item documents, sorted by name.
  */
 export function getUserLootBooks() {
-  const folderName = getLootFolderName();
-  const folder = game.folders.find((f) => f.type === "Item" && f.name === folderName);
-
   return game.items
     .filter((item) => {
       if (!isLootSpellbook(item)) return false;
-      if (folder && item.folder?.id !== folder.id) return false;
       if (game.user.isGM) return true;
       return item.testUserPermission(game.user, "OBSERVER");
     })

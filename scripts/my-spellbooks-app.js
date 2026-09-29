@@ -27,10 +27,19 @@ import { openLootBook } from "./loot-book-app.js";
 import { openImport } from "./import-app.js";
 import { listImportableActors } from "./import-spells.js";
 import { openFormulaBook } from "./formula-book-app.js";
+import { openOrFocus } from "./app-utils.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
+  /**
+   * Open the browser, focusing it when it is already open.
+   * @returns {MySpellbooksApp}
+   */
+  static open() {
+    return openOrFocus(MySpellbooksApp.DEFAULT_OPTIONS.id, () => new MySpellbooksApp());
+  }
+
   /** @inheritdoc */
   static DEFAULT_OPTIONS = {
     id: "bws-my-spellbooks",
@@ -94,7 +103,7 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** Open a blank creator window. */
   static async #onCreate() {
-    new SpellbookApp().render(true);
+    SpellbookApp.open();
   }
 
   /**
@@ -112,7 +121,7 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** Open the random loot spellbook generator. */
   static async #onRollLoot() {
-    new LootGeneratorApp().render(true);
+    LootGeneratorApp.open();
   }
 
   /** Open the underlying journal entry, or a loot book's reader. */
@@ -146,7 +155,7 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!journal) return;
 
     if (getBookKind(journal) === BOOK_KINDS.FORMULAS) openFormulaBook(journal);
-    else new SpellbookApp({ journal }).render(true);
+    else SpellbookApp.open({ journal });
   }
 
   /** Delete a spellbook, or a loot book item, after confirmation. */

@@ -15,6 +15,7 @@ import { actorKnowsFormula, addFormulaToActor, isCrafter, listCrafters } from ".
 import { getRarityLabel } from "./spell-query.js";
 import { canEditSpellbook, getBookKind, getStoredSpells } from "./persistence.js";
 import { resolveTargetActor } from "./slot-manager.js";
+import { domSafe, openOrFocus } from "./app-utils.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -24,7 +25,8 @@ export class FormulaBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
    * @param {object} options.journal The formula book JournalEntry to read.
    */
   constructor(options = {}) {
-    super(options);
+    // Keyed per book so two can be open side by side and reopening one focuses it.
+    super({ ...options, id: FormulaBookApp.idFor(options.journal) });
 
     /** @type {object} */
     this.journal = options.journal;
@@ -67,11 +69,12 @@ export class FormulaBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
   };
 
   /**
-   * Windows are keyed per book so two can be open side by side.
-   * @inheritdoc
+   * Window id for a given book.
+   * @param {object} journal A formula book JournalEntry.
+   * @returns {string}
    */
-  get id() {
-    return `bws-formula-book-${this.journal?.id ?? "unknown"}`;
+  static idFor(journal) {
+    return `bws-formula-book-${domSafe(journal?.id)}`;
   }
 
   /** @inheritdoc */
@@ -204,7 +207,5 @@ export function openFormulaBook(journal) {
     ui.notifications.warn(game.i18n.localize("BWS.Formula.NotAFormulaBook"));
     return null;
   }
-  const app = new FormulaBookApp({ journal });
-  app.render(true);
-  return app;
+  return openOrFocus(FormulaBookApp.idFor(journal), () => new FormulaBookApp({ journal }));
 }

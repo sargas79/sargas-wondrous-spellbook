@@ -44,8 +44,8 @@ and **crafter's blueprints**.
 
 | | |
 |---|---|
-| **Foundry VTT** | v14 (verified against build 366) |
-| **Game system** | Pathfinder Second Edition (verified against 8.4.1) |
+| **Foundry VTT** | v14 (verified against build 368) |
+| **Game system** | Pathfinder Second Edition (verified against 8.5.1) |
 | **Sequencer** | Optional |
 | **JB2A** (`jb2a_patreon`, or the free `JB2A_DnD5e`) | Optional, never installed for you |
 
@@ -88,15 +88,24 @@ git clone https://github.com/sargas79/wondrous-spellbook.git blizzards-wondrous-
 Select a token (or rely on your assigned character), then click ↓ on any spell row. The dialog
 lists the actor's spellcasting entries and the ranks available on the chosen entry, with free
 prepared-slot counts where applicable. Prepared entries get the spell placed into an actual
-open slot; spontaneous and innate entries just receive the spell.
+open slot, cantrips included. If the chosen rank is full, the spell is still added to the
+entry and a warning says it was not prepared. Spontaneous and innate entries receive the
+spell heightened to the chosen rank. Flexible casters receive it into their spell
+collection. Cantrips and focus spells are locked to their own rank, and a focus spell
+offers the actor's focus pool first.
+
+If PF2e refuses the spell, for example a focus spell sent to a prepared entry, PF2e's own
+warning is shown and nothing is written.
 
 If the actor has no spellcasting entries, the dialog says so rather than offering an empty
 dropdown.
 
 ### Importing from a character sheet
 
-*My Spellbooks* has an **Import** button, and every PF2e character sheet you own grows a
-small import icon in its window header. Either opens the importer on that character.
+*My Spellbooks* has an **Import** button, and every PF2e character sheet you own gains an
+**Import** button in its window header. Either opens the importer on that character. This
+button is independent of the Character Sheet Integration setting, which only controls the
+animation gear.
 
 At the top of the window is a switch: **Spells**, **Rituals**, **Formulas**. It decides what
 is read off the sheet, which existing books may be merged into, and what the resulting book
@@ -184,8 +193,8 @@ onto the selected token's actor. It is an ordinary `equipment` item — priced, 
 and carrying a readable spell list in its description — so it drags into loot chests and
 inventories like any other treasure.
 
-A book written into the folder is also listed in *My Spellbooks* alongside the journal
-spellbooks, tagged with its level. Opening a row there opens the reader; a GM can also
+A book created in the world is also listed in *My Spellbooks* alongside the journal
+spellbooks, tagged with its level. It stays listed if you move it to another folder. Opening a row there opens the reader; a GM can also
 open the item sheet or delete the book from the same row. Copies handed straight to an
 actor live on that actor's sheet and are not listed.
 
@@ -195,7 +204,7 @@ no longer reproduces from its seed.
 
 ### Learning from a loot spellbook
 
-Open the item and click **Open spellbook** in its sheet header (or right-click it in the
+Open the item and click **Spellbook** in its sheet header (or right-click it in the
 Items directory, or open its row in *My Spellbooks*). Each spell has a **Learn** button, which opens the same *Send to Slot*
 dialog the Spellbook Creator uses — so learning goes through one write path with all its
 prepared-slot and heightening handling intact.
@@ -209,7 +218,9 @@ remembers which characters have already copied a spell out of it.
 With JB2A and Sequencer both active, each spell row on the PF2e character sheet grows a small
 gear button. Click it, enter a Sequencer database path (the field autocompletes against the
 Sequencer database, and there's a button to open the Database Viewer), and save. The effect
-plays on the caster's token when that spell is cast from the sheet.
+plays on the caster's token when that spell is cast from the sheet. Posting a spell's
+description to chat without casting it does not play the effect, and a caster with no
+token on the current scene plays nothing.
 
 The path is stored as a flag on the actor's spell item. If JB2A or Sequencer is later disabled,
 **the flag is preserved** — the editing controls just disappear and playback is skipped
@@ -225,6 +236,16 @@ Spellbooks are created with **ownership default NONE**, **OWNER for the creator*
 Players see only spellbooks they own, tested via `testUserPermission(user, "OWNER")` rather
 than by comparing creator ids — so ownership granted after the fact is respected. Edit and
 delete controls are disabled per-row for anyone without OWNER on that entry.
+
+A player needs the **Create Journal Entries** permission to save a new book. Foundry grants
+it to Trusted Players and above by default, so a plain Player sees a note in the creator and
+the importer explaining this, with the save button disabled. Such a player can still send
+spells to their own character and merge into a book they already own. A GM can grant the
+permission to the Player role under **Game Settings → User Management**.
+
+Books are recognised by this module's flag wherever they are filed. The folder setting only
+decides where new books go, so renaming it or moving a book does not hide anything. A player
+cannot create folders, so a book a player saves before the folder exists lands at the root.
 
 ---
 
@@ -296,6 +317,7 @@ lang/en.json                     All UI strings
 styles/spellbook.css             Nocturne-flavoured dark theme, scoped to .bws
 scripts/
   constants.js                   Shared ids, settings keys, template path helper
+  app-utils.js                   Window ids, focus-or-open, V2 header controls
   main.js                        init/ready hooks, settings, scene control button
   spell-query.js                 Compendium query, filtering, rank grouping
   persistence.js                 Folder + JournalEntry writes, ownership rules
@@ -311,6 +333,7 @@ scripts/
   loot-book-app.js               Loot book reader, learn flow, item sheet injection
   animation-config.js            JB2A/Sequencer detection, config dialog, cast hooks
 templates/                       Handlebars templates for the above
+tools/check-lang.mjs             CI check that the language file loads in Foundry
 ```
 
 ---
@@ -321,9 +344,15 @@ PF2e renamed spell "level" to "rank" in its interface, but the stored source dat
 `system.level.value`. Every accessor in `spell-query.js` reads the document getter first and falls
 back to raw source paths, so the module tolerates data-model changes across PF2e releases.
 
-Similarly, `slot-manager.js` prefers PF2e's own `SpellcastingEntryPF2e#addSpell` and
-`#prepareSpell` helpers and only falls back to a manual `Item.create` + `system.location` write
-if those are unavailable.
+The creator, loot generator and importer read the compendium **index** rather than loading
+every spell document, which keeps the first open under a second on a full PF2e install. A
+spell's full document is fetched only when it is sent to an actor.
+
+`slot-manager.js` writes through PF2e's `SpellCollection#addSpell` and `#prepareSpell`
+(`entry.spells`), not the same-named methods on the entry itself. On PF2e 8.x the entry's
+versions return the spell they were given rather than the item they created, and do not wait
+for the write, so a slot prepared with their result pointed at the compendium spell. A manual
+embedded-item write is kept only for a PF2e build with no spell collection at all.
 
 Crafting formulas are read from `system.crafting.formulas`, with PF2e's `actor.crafting`
 helper as a fallback, and written back through a plain actor update. Prices come from PF2e's
@@ -339,9 +368,19 @@ The importer reads a sheet spell's origin from `_stats.compendiumSource` and fro
 spell name, so a spell keeps its compendium link across both Foundry's move of that field and
 a compendium being renamed or replaced.
 
-The spell-cast signal has moved between PF2e releases. The module listens on `pf2e.castSpell`
-and additionally on `createChatMessage` (reading the cast card's origin flags) as a
-version-tolerant fallback, de-duplicating so a single cast animates once.
+PF2e has no dedicated spell-cast hook. The module listens on `createChatMessage` and reads the
+card's `flags.pf2e.origin`, acting only when its roll options include
+`origin:action:slug:cast-a-spell`, which PF2e adds for a real cast but not for a spell posted
+to chat. Only the message's author plays the effect, since Sequencer broadcasts it to
+everyone.
+
+PF2e 8.x character and item sheets are Application V1, so the Import and Spellbook header
+buttons are added through V1's `get…HeaderButtons` hooks. A DOM fallback is kept for a future
+release that moves those sheets to Application V2.
+
+`tools/check-lang.mjs` runs in CI. Foundry drops a language file whose keys cannot be
+expanded, for example `A.B` defined next to `A.B.C`, and every label then shows as its raw
+key. The script fails on that, and on any literal key the code uses that the file lacks.
 
 ---
 

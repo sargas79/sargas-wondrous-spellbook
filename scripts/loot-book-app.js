@@ -16,6 +16,7 @@ import { getStoredSpells } from "./persistence.js";
 import { getRankBadge, getRankLabel, getRarityLabel } from "./spell-query.js";
 import { openSendToSlotDialog, resolveTargetActor } from "./slot-manager.js";
 import { getLootMeta, isLootSpellbook } from "./loot-generator.js";
+import { domSafe, injectHeaderControl, openOrFocus } from "./app-utils.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -33,20 +34,35 @@ function setting(key, fallback) {
   }
 }
 
+/**
+ * Key under which a spell's learners are recorded.
+ *
+ * A uuid is full of dots, and Foundry expands dotted keys into nested objects when a
+ * document is updated: stored as-is, `Compendium.pf2e.spells-srd.Item.x` became a tree
+ * that a lookup by the uuid never found, so nothing ever showed as learned.
+ *
+ * @param {string} uuid Spell uuid.
+ * @returns {string}
+ */
+function learnedKey(uuid) {
+  return String(uuid).replaceAll(".", "~");
+}
+
 export class LootBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
   /**
    * @param {object} options
    * @param {object} options.item The loot spellbook Item to read.
    */
   constructor(options = {}) {
-    super(options);
+    // Keyed per item so two books can be open side by side and reopening one focuses
+    // it. The uuid, not the id: copies on two actors are different books.
+    super({ ...options, id: LootBookApp.idFor(options.item) });
     /** @type {object} */
     this.item = options.item;
   }
 
   /** @inheritdoc */
   static DEFAULT_OPTIONS = {
-    id: "bws-loot-book",
     classes: ["bws", "bws-loot-book"],
     tag: "div",
     window: {
@@ -66,11 +82,12 @@ export class LootBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
   };
 
   /**
-   * Windows are keyed per item so two books can be open side by side.
-   * @inheritdoc
+   * Window id for a given book.
+   * @param {object} item A loot spellbook Item.
+   * @returns {string}
    */
-  get id() {
-    return `bws-loot-book-${this.item?.id ?? "unknown"}`;
+  static idFor(item) {
+    return `bws-loot-book-${domSafe(item?.uuid)}`;
   }
 
   /** @inheritdoc */
@@ -82,6 +99,11 @@ export class LootBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
   async _prepareContext(options) {
     const meta = getLootMeta(this.item) ?? {};
     const learned = meta.learned ?? {};
+    const learnedBy = (uuid) =>
+      learned[learnedKey(uuid)] ??
+      // Books written before the key was encoded hold it nested under the uuid's parts.
+      foundry.utils.getProperty(learned, uuid) ??
+      [];
     const target = this.#resolveActor();
     const consume = !!setting(SETTINGS.CONSUME_ON_LEARN, false);
 
@@ -93,7 +115,7 @@ export class LootBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
     );
 
     for (const spell of stored) {
-      const actorIds = learned[spell.uuid] ?? [];
+      const actorIds = Array.isArray(learnedBy(spell.uuid)) ? learnedBy(spell.uuid) : [];
       const names = actorIds.map((id) => game.actors.get(id)?.name).filter(Boolean);
       const alreadyLearned = !!target && actorIds.includes(target.actor.id);
 
@@ -188,11 +210,13 @@ export class LootBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
     try {
       const meta = getLootMeta(this.item);
       if (!meta) return;
-      const learned = foundry.utils.deepClone(meta.learned ?? {});
-      const actors = new Set(learned[uuid] ?? []);
+      const key = learnedKey(uuid);
+      const previous = meta.learned?.[key] ?? foundry.utils.getProperty(meta.learned ?? {}, uuid);
+      const actors = new Set(Array.isArray(previous) ? previous : []);
       actors.add(actorId);
-      learned[uuid] = [...actors];
-      await this.item.setFlag(MODULE_ID, LOOT_FLAG, { ...meta, learned });
+      // One targeted key, not the whole map: a write of the full object would merge
+      // into the stored one anyway, and this cannot clobber another reader's entry.
+      await this.item.update({ [`flags.${MODULE_ID}.${LOOT_FLAG}.learned.${key}`]: [...actors] });
     } catch (err) {
       console.warn("Blizzard's Wondrous Spellbook | Failed to record a learned spell", err);
     }
@@ -209,9 +233,7 @@ export function openLootBook(item) {
     ui.notifications.warn(game.i18n.localize("BWS.Loot.NotALootBook"));
     return null;
   }
-  const app = new LootBookApp({ item });
-  app.render(true);
-  return app;
+  return openOrFocus(LootBookApp.idFor(item), () => new LootBookApp({ item }));
 }
 
 /**
@@ -228,52 +250,54 @@ export function openLootBook(item) {
 export function injectLootBookButton(app, html) {
   const item = app?.document ?? app?.item;
   if (!isLootSpellbook(item)) return;
+  injectHeaderControl(app, html, { ...OPEN_CONTROL, onClick: () => openLootBook(item) });
+}
 
-  const root = html instanceof HTMLElement ? html : html?.[0];
-  // The header lives outside `.window-content` on ApplicationV2, so walk up to the
-  // application frame before looking for it.
-  const frame = root?.closest?.(".application, .app") ?? root;
-  const header = frame?.querySelector?.(".window-header");
-  if (!header || header.querySelector(".bws-open-loot-book")) return;
+/** Shared description of the item sheet's "open spellbook" control. */
+const OPEN_CONTROL = Object.freeze({
+  cssClass: "bws-open-loot-book",
+  icon: "fa-solid fa-book-sparkles",
+  label: "BWS.Loot.OpenBookShort",
+  tooltip: "BWS.Loot.OpenBook"
+});
 
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "header-control icon fa-solid fa-book-sparkles bws-open-loot-book";
-  button.dataset.tooltip = game.i18n.localize("BWS.Loot.OpenBook");
-  button.setAttribute("aria-label", game.i18n.localize("BWS.Loot.OpenBook"));
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    openLootBook(item);
+/**
+ * Add "Open spellbook" to an Application V1 item sheet's header buttons.
+ *
+ * Registered on `getItemSheetPF2eHeaderButtons`, which V1 fires while it builds the
+ * header of every PF2e item sheet; anything that is not a loot book is left alone.
+ *
+ * @param {object} app The item sheet being rendered.
+ * @param {object[]} buttons The header buttons being assembled.
+ * @returns {void}
+ */
+export function addLootBookHeaderButton(app, buttons) {
+  const item = app?.document ?? app?.item;
+  if (!isLootSpellbook(item) || buttons.some((b) => b.class === OPEN_CONTROL.cssClass)) return;
+  buttons.unshift({
+    label: OPEN_CONTROL.label,
+    class: OPEN_CONTROL.cssClass,
+    icon: OPEN_CONTROL.icon,
+    tooltip: OPEN_CONTROL.tooltip,
+    onclick: () => openLootBook(item)
   });
-
-  const close = header.querySelector("[data-action='close'], .close");
-  header.insertBefore(button, close ?? null);
 }
 
 /**
  * Add an "Open Spellbook" entry to the Items directory context menu.
  *
- * Registered under both the current and the legacy hook name so the entry survives
- * Foundry's renaming of directory context hooks.
+ * Uses the v13+ entry shape (`label`, `visible`, `onClick`); the older `name`,
+ * `condition` and `callback` keys log a deprecation warning on every menu open.
  *
  * @returns {void}
  */
 export function registerLootBookContextMenu() {
+  const itemFor = (li) => game.items.get(li?.dataset?.entryId);
   const entry = {
-    name: "BWS.Loot.OpenBook",
-    icon: '<i class="fa-solid fa-book-sparkles"></i>',
-    condition: (li) => {
-      const id = li instanceof HTMLElement ? li.dataset.entryId ?? li.dataset.documentId : li?.data?.("entry-id");
-      return isLootSpellbook(game.items.get(id));
-    },
-    callback: (li) => {
-      const id = li instanceof HTMLElement ? li.dataset.entryId ?? li.dataset.documentId : li?.data?.("entry-id");
-      openLootBook(game.items.get(id));
-    }
+    label: "BWS.Loot.OpenBook",
+    icon: "fa-solid fa-book-sparkles",
+    visible: (li) => isLootSpellbook(itemFor(li)),
+    onClick: (_event, li) => openLootBook(itemFor(li))
   };
-
-  const add = (_directory, options) => options.push(entry);
-  Hooks.on("getItemContextOptions", add);
-  Hooks.on("getItemDirectoryEntryContext", add);
+  Hooks.on("getItemContextOptions", (_directory, options) => options.push(entry));
 }

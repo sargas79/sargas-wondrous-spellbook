@@ -15,8 +15,8 @@
   {{/unless}}
 
   <div class="bws-field bws-field-name">
-    <label for="bws-name">{{nameLabel}}</label>
-    <input id="bws-name" type="text" name="spellbookName" value="{{spellbookName}}"
+    <label for="{{partId}}-bws-name">{{nameLabel}}</label>
+    <input id="{{partId}}-bws-name" type="text" name="spellbookName" value="{{spellbookName}}"
            placeholder="{{localize 'BWS.Creator.NamePlaceholder'}}" autocomplete="off"
            {{#if readOnly}}disabled{{/if}} />
   </div>
@@ -33,10 +33,10 @@
   </div>
 
   <div class="bws-field bws-field-search">
-    <label for="bws-search">{{localize "BWS.Creator.SearchLabel"}}</label>
+    <label for="{{partId}}-bws-search">{{localize "BWS.Creator.SearchLabel"}}</label>
     <div class="bws-search-wrap">
       <i class="fa-solid fa-magnifying-glass"></i>
-      <input id="bws-search" type="search" name="search" value="{{search}}"
+      <input id="{{partId}}-bws-search" type="search" name="search" value="{{search}}"
              placeholder="{{localize 'BWS.Creator.SearchPlaceholder'}}" autocomplete="off" />
     </div>
   </div>

@@ -13,7 +13,7 @@
  */
 
 import { MODULE_ID, template } from "./constants.js";
-import { MAX_RANK, getRankLabel, isRitual, resolveSpell } from "./spell-query.js";
+import { MAX_RANK, getRankLabel, isFocusSpell, isRitual, resolveSpell } from "./spell-query.js";
 import { getAnimationsAvailable, openAnimationConfigDialog } from "./animation-config.js";
 
 /**
@@ -51,6 +51,31 @@ function describeEntryKind(entry) {
 }
 
 /**
+ * Does this entry prepare spells into individual slots?
+ *
+ * A flexible caster is a prepared entry that keeps a spell collection instead: PF2e
+ * empties its ranked slot arrays, so every rank above cantrips behaves like a
+ * spontaneous repertoire. Cantrips still go into ordinary slots.
+ *
+ * @param {object} entry A SpellcastingEntryPF2e.
+ * @param {number} rank Spell rank.
+ * @returns {boolean}
+ */
+function usesSlots(entry, rank) {
+  if (!entry?.isPrepared) return false;
+  return rank === 0 || !entry.isFlexible;
+}
+
+/**
+ * PF2e's group id for a rank: `cantrips` for rank 0, the number otherwise.
+ * @param {number} rank Spell rank.
+ * @returns {string|number}
+ */
+function groupIdFor(rank) {
+  return rank === 0 ? "cantrips" : rank;
+}
+
+/**
  * Read the prepared-slot array for one rank of a prepared entry.
  * @param {object} entry A SpellcastingEntryPF2e.
  * @param {number} rank Spell rank.
@@ -74,19 +99,34 @@ function findFreeSlotIndex(entry, rank) {
 /**
  * Build the rank options offered for a given entry and spell.
  *
- * Cantrips are locked to the cantrip rank because PF2e auto-heightens them. Every
- * other spell may be slotted at its own rank or heightened up to the entry's
- * highest available rank.
+ * Cantrips and focus spells are locked to their own rank because PF2e auto-heightens
+ * them. Every other spell may be slotted at its own rank or heightened up to the
+ * entry's highest available rank.
  *
  * @param {object} entry A SpellcastingEntryPF2e.
  * @param {number} baseRank The spell's own rank.
- * @param {boolean} isCantrip Whether the spell is a cantrip.
+ * @param {object} flags
+ * @param {boolean} flags.isCantrip Whether the spell is a cantrip.
+ * @param {boolean} flags.isFocus Whether the spell is a focus spell.
  * @returns {object[]} Option view models.
  */
-function buildRankOptions(entry, baseRank, isCantrip) {
-  if (isCantrip) {
-    return [{ rank: 0, label: getRankLabel(0), free: null, disabled: false }];
-  }
+function buildRankOptions(entry, baseRank, { isCantrip, isFocus }) {
+  const option = (rank) => {
+    const slotted = usesSlots(entry, rank);
+    const slots = slotted ? getPreparedSlots(entry, rank) : [];
+    const free = slotted ? slots.filter((s) => !s?.id).length : null;
+    return {
+      rank,
+      label: getRankLabel(rank),
+      free,
+      freeLabel: free === null ? "" : game.i18n.format("BWS.Slot.FreeCount", { count: free }),
+      // A slotted entry with no slot array at all for this rank cannot hold it.
+      disabled: slotted && slots.length === 0
+    };
+  };
+
+  if (isCantrip) return [option(0)];
+  if (isFocus) return [{ ...option(baseRank), free: null, freeLabel: "", disabled: false }];
 
   // `highestRank` is the modern accessor; fall back to the full range when absent.
   const highest = Number(entry?.highestRank);
@@ -94,69 +134,83 @@ function buildRankOptions(entry, baseRank, isCantrip) {
   const max = Math.clamp(ceiling, baseRank, MAX_RANK);
 
   const options = [];
-  for (let rank = baseRank; rank <= max; rank++) {
-    const slots = getPreparedSlots(entry, rank);
-    const freeCount = entry.isPrepared ? slots.filter((s) => !s?.id).length : null;
-    options.push({
-      rank,
-      label: getRankLabel(rank),
-      free: freeCount,
-      // A prepared entry with no slot array at all for this rank cannot hold it.
-      disabled: entry.isPrepared && slots.length === 0
-    });
-  }
+  for (let rank = baseRank; rank <= max; rank++) options.push(option(rank));
   return options;
+}
+
+/**
+ * The live spell collection behind an entry.
+ *
+ * Re-read off the actor each time: PF2e rebuilds `entry.spells` whenever the actor is
+ * prepared, so a collection captured before a write describes the old slot state.
+ *
+ * @param {object} actor The owning actor.
+ * @param {string} entryId Spellcasting entry id.
+ * @returns {{ entry: object|null, collection: object|null }}
+ */
+function liveEntry(actor, entryId) {
+  const entry = actor.items.get(entryId) ?? null;
+  return { entry, collection: entry?.spells ?? null };
 }
 
 /**
  * Attach a spell to a spellcasting entry at a chosen rank.
  *
+ * Goes through PF2e's `SpellCollection` rather than the entry's own `addSpell` and
+ * `prepareSpell`. Those wrappers return the spell they were handed (not the item they
+ * created) and do not await the write, so preparing with their result pointed the slot
+ * at the compendium document and reported success when PF2e had refused the spell.
+ *
  * @param {object} actor The target actor.
- * @param {object} entry The chosen SpellcastingEntryPF2e.
+ * @param {string} entryId The chosen spellcasting entry's id.
  * @param {object} spellDoc The source SpellPF2e document from a compendium.
  * @param {number} rank The chosen slot rank.
- * @returns {Promise<{ item: object, prepared: boolean }|null>}
+ * @returns {Promise<{ item: object, prepared: boolean, full: boolean }|null>} Null when
+ *   PF2e refused the spell; it has already told the user why.
  */
-async function attachSpell(actor, entry, spellDoc, rank) {
+async function attachSpell(actor, entryId, spellDoc, rank) {
+  let { entry, collection } = liveEntry(actor, entryId);
+  if (!entry) return null;
+
   let item = null;
-
-  // Preferred path: let PF2e do its own bookkeeping.
-  if (typeof entry.addSpell === "function") {
-    try {
-      item = await entry.addSpell(spellDoc, { groupId: rank });
-    } catch (err) {
-      console.warn("Blizzard's Wondrous Spellbook | addSpell failed, falling back", err);
-    }
-  }
-
-  // Fallback: create the embedded item and point it at the entry by hand.
-  if (!item) {
+  if (typeof collection?.addSpell === "function") {
+    item = await collection.addSpell(spellDoc, { groupId: groupIdFor(rank) });
+    // A collection exists and said no: PF2e has warned (wrong entry for a focus spell,
+    // rank too low). Creating the item by hand would override that decision.
+    if (!item) return null;
+  } else {
+    // No collection at all means a PF2e build this module does not know. Write the item
+    // by hand and bind it to the entry the way PF2e's own drop handler does.
     const source = spellDoc.toObject();
+    delete source._id;
     source.system.location = { ...(source.system.location ?? {}), value: entry.id };
     if (rank > 0 && rank !== (source.system.level?.value ?? rank)) {
       source.system.location.heightenedLevel = rank;
     }
-    const created = await Item.create(source, { parent: actor });
-    item = Array.isArray(created) ? created[0] : created;
+    [item] = await actor.createEmbeddedDocuments("Item", [source]);
   }
-
   if (!item) return null;
 
-  // Prepared entries need the spell placed into an actual slot to occupy it.
-  let prepared = false;
-  if (entry.isPrepared && rank > 0 && typeof entry.prepareSpell === "function") {
-    const slotIndex = findFreeSlotIndex(entry, rank);
-    if (slotIndex >= 0) {
-      try {
-        await entry.prepareSpell(item, rank, slotIndex);
-        prepared = true;
-      } catch (err) {
-        console.warn("Blizzard's Wondrous Spellbook | prepareSpell failed", err);
-      }
-    }
-  }
+  // Slotted entries need the spell placed into an actual slot to occupy it.
+  if (!usesSlots(entry, rank)) return { item, prepared: false, full: false };
 
-  return { item, prepared };
+  ({ entry, collection } = liveEntry(actor, entryId));
+  const slotIndex = findFreeSlotIndex(entry, rank);
+  if (slotIndex < 0) return { item, prepared: false, full: true };
+
+  let prepared = false;
+  try {
+    if (typeof collection?.prepareSpell === "function") {
+      prepared = !!(await collection.prepareSpell(item, groupIdFor(rank), slotIndex));
+    } else {
+      const slots = foundry.utils.deepClone(getPreparedSlots(entry, rank));
+      slots[slotIndex] = { id: item.id, expended: !!slots[slotIndex]?.expended };
+      prepared = !!(await entry.update({ [`system.slots.slot${rank}.prepared`]: slots }));
+    }
+  } catch (err) {
+    console.warn("Blizzard's Wondrous Spellbook | Preparing the spell failed", err);
+  }
+  return { item, prepared, full: false };
 }
 
 /**
@@ -219,9 +273,19 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
   }
 
   const isCantrip = spellDoc.isCantrip ?? (spellDoc.system?.traits?.value ?? []).includes("cantrip");
-  const baseRank = isCantrip ? 0 : Number(spellDoc.rank ?? spellDoc.system?.level?.value ?? 1);
+  const isFocus = !isCantrip && isFocusSpell(spellDoc);
+  // The base rank, never the heightened one: `rank` on an owned spell folds in its slot.
+  const baseRank = isCantrip
+    ? 0
+    : Number(spellDoc.baseRank ?? spellDoc.system?.level?.value ?? spellDoc.rank ?? 1);
+  const rankFlags = { isCantrip, isFocus };
 
-  const entryViews = entries.map((entry) => ({
+  // A focus spell only fits a focus pool; offer those first so the default is valid.
+  const ordered = isFocus
+    ? [...entries.filter((e) => e.isFocusPool), ...entries.filter((e) => !e.isFocusPool)]
+    : entries;
+
+  const entryViews = ordered.map((entry) => ({
     id: entry.id,
     name: entry.name,
     kind: describeEntryKind(entry),
@@ -230,11 +294,15 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
 
   const content = await foundry.applications.handlebars.renderTemplate(template("send-to-slot.hbs"), {
     spell: { name: spellDoc.name, img: spellDoc.img },
-    targetLine: game.i18n.format("BWS.Slot.TargetLine", { actor: actor.name, source }),
+    targetLine: source
+      ? game.i18n.format("BWS.Slot.TargetLine", { actor: actor.name, source })
+      : game.i18n.format("BWS.Slot.TargetLineBare", { actor: actor.name }),
     entries: entryViews,
-    ranks: buildRankOptions(entries[0], baseRank, isCantrip),
+    ranks: buildRankOptions(ordered[0], baseRank, rankFlags),
     baseRank,
-    isCantrip
+    rankLocked: isCantrip || isFocus,
+    // Two dialogs can be open at once; their labels must not point at each other's fields.
+    uid: `bws-slot-${foundry.utils.randomID()}`
   });
 
   let result = null;
@@ -252,12 +320,20 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
           default: true,
           callback: async (_event, _button, dialog) => {
             const entryId = dialog.element.querySelector("[name='entry']")?.value;
-            const rank = Number(dialog.element.querySelector("[name='rank']")?.value ?? baseRank);
+            const rankSelect = dialog.element.querySelector("[name='rank']");
             const entry = entries.find((e) => e.id === entryId);
             if (!entry) return;
+            // Every rank disabled leaves the select empty, and `Number("")` is 0: without
+            // this check the spell would be sent as a cantrip.
+            if (!rankSelect?.value || rankSelect.selectedOptions[0]?.disabled) {
+              ui.notifications.warn(game.i18n.format("BWS.Slot.NoRankAvailable", { entry: entry.name }));
+              return;
+            }
+            const rank = Number(rankSelect.value);
+            const rankLabel = getRankLabel(rank);
 
             try {
-              const outcome = await attachSpell(actor, entry, spellDoc, rank);
+              const outcome = await attachSpell(actor, entry.id, spellDoc, rank);
               if (!outcome) return;
               result = outcome.item;
 
@@ -266,19 +342,25 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
                   game.i18n.format("BWS.Slot.SuccessPrepared", {
                     spell: spellDoc.name,
                     entry: entry.name,
-                    rank
+                    rank: rankLabel
                   })
                 );
-              } else if (entry.isPrepared && rank > 0 && findFreeSlotIndex(entry, rank) < 0) {
+              } else if (usesSlots(entry, rank)) {
+                // Added to the entry, but no slot took it: either the rank was full, or
+                // PF2e refused the preparation and has already said why.
                 ui.notifications.warn(
-                  game.i18n.format("BWS.Slot.NoFreeSlot", { rank, entry: entry.name })
+                  game.i18n.format(outcome.full ? "BWS.Slot.NoFreeSlot" : "BWS.Slot.NotPrepared", {
+                    rank: rankLabel,
+                    entry: entry.name,
+                    spell: spellDoc.name
+                  })
                 );
               } else {
                 ui.notifications.info(
                   game.i18n.format("BWS.Slot.Success", {
                     spell: spellDoc.name,
                     entry: entry.name,
-                    rank
+                    rank: rankLabel
                   })
                 );
               }
@@ -301,15 +383,19 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
         entrySelect.addEventListener("change", () => {
           const entry = entries.find((e) => e.id === entrySelect.value);
           if (!entry) return;
-          const options = buildRankOptions(entry, baseRank, isCantrip);
-          rankSelect.innerHTML = options
-            .map((opt) => {
-              const free = opt.free === null ? "" : ` (${opt.free} free)`;
-              return `<option value="${opt.rank}"${opt.disabled ? " disabled" : ""}>${
-                opt.label
-              }${free}</option>`;
+          const options = buildRankOptions(entry, baseRank, rankFlags);
+          rankSelect.replaceChildren(
+            ...options.map((opt) => {
+              const node = document.createElement("option");
+              node.value = String(opt.rank);
+              node.textContent = opt.freeLabel ? `${opt.label} (${opt.freeLabel})` : opt.label;
+              node.disabled = opt.disabled;
+              return node;
             })
-            .join("");
+          );
+          // Land on the first rank that can actually take the spell.
+          const firstOpen = options.find((opt) => !opt.disabled);
+          if (firstOpen) rankSelect.value = String(firstOpen.rank);
         });
         entrySelect.dispatchEvent(new Event("change"));
       }

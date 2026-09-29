@@ -352,6 +352,12 @@ export function getBookKindIcon(kind) {
  * @returns {Promise<object|null>} The created JournalEntry, or null on failure.
  */
 export async function createSpellbook({ name, spells, kind = BOOK_KINDS.SPELLS }) {
+  // Core only lets roles with "Create Journal Entries" do this, which by default is
+  // Trusted Player and up. Without this check a Player got a bare "failed to save".
+  if (!canCreateSpellbook()) {
+    ui.notifications.warn(game.i18n.localize("BWS.Error.NoJournalCreate"));
+    return null;
+  }
   try {
     const folder = await getOrCreateSpellbooksFolder();
     const stored = spells.map((record) => toStoredRecord(record, kind));
@@ -483,11 +489,24 @@ export function canEditSpellbook(journal) {
 }
 
 /**
+ * May the current user create a new book at all?
+ * @returns {boolean}
+ */
+export function canCreateSpellbook() {
+  return game.user.isGM || game.user.can("JOURNAL_CREATE");
+}
+
+/**
  * List the spellbooks the current user may see.
  *
- * GMs get every spellbook in the folder. Players get only the ones they own, tested
- * through `testUserPermission` rather than by comparing the creator id, so ownership
- * granted after the fact is respected.
+ * A book is recognised by this module's flag, wherever it is filed. Filtering by the
+ * configured folder hid every book the moment that setting was renamed, and hid a book
+ * a player saved before any GM had created the folder (a player cannot create one, so
+ * theirs lands at the root).
+ *
+ * GMs get every spellbook. Players get only the ones they own, tested through
+ * `testUserPermission` rather than by comparing the creator id, so ownership granted
+ * after the fact is respected.
  *
  * @param {object} [options]
  * @param {string|null} [options.kind=null] Keep only books of this kind. Null lists
@@ -495,13 +514,9 @@ export function canEditSpellbook(journal) {
  * @returns {object[]} JournalEntry documents, sorted by name.
  */
 export function getUserSpellbooks({ kind = null } = {}) {
-  const folderName = getFolderName();
-  const folder = game.folders.find((f) => f.type === "JournalEntry" && f.name === folderName);
-
   return game.journal
     .filter((entry) => {
       if (!isSpellbook(entry)) return false;
-      if (folder && entry.folder?.id !== folder.id) return false;
       if (kind && getBookKind(entry) !== kind) return false;
       if (game.user.isGM) return true;
       return entry.testUserPermission(game.user, "OWNER");

@@ -4,8 +4,8 @@
 
   <header class="bws-formula-header">
     <div class="bws-field">
-      <label for="bws-formula-crafter">{{localize "BWS.Formula.CrafterLabel"}}</label>
-      <select id="bws-formula-crafter" name="crafter" {{#unless hasCrafter}}disabled{{/unless}}>
+      <label for="{{partId}}-bws-formula-crafter">{{localize "BWS.Formula.CrafterLabel"}}</label>
+      <select id="{{partId}}-bws-formula-crafter" name="crafter" {{#unless hasCrafter}}disabled{{/unless}}>
         {{#each crafters}}
           <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
         {{/each}}
