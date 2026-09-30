@@ -14,7 +14,12 @@
 
 import { MODULE_ID, template } from "./constants.js";
 import { MAX_RANK, getRankLabel, isFocusSpell, isRitual, resolveSpell } from "./spell-query.js";
-import { getAnimationsAvailable, openAnimationConfigDialog } from "./animation-config.js";
+import {
+  getAnimationPath,
+  getAnimationsAvailable,
+  openAnimationConfigDialog,
+  syncAnimationRecipe
+} from "./animation-config.js";
 
 /**
  * Resolve the actor a spell should be sent to.
@@ -412,7 +417,7 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
  * Inject the animation configuration button into PF2e character sheet spell rows.
  *
  * Availability is evaluated here, on every sheet render, rather than being cached at
- * init: toggling JB2A or Sequencer mid-session takes effect on the next render. When
+ * init: toggling JB2A or Sargas Visual Automation mid-session takes effect on the next render. When
  * animations are unavailable nothing is injected at all.
  *
  * @param {object} app The rendered CharacterSheetPF2e application.
@@ -461,7 +466,14 @@ export function injectSheetControls(app, html) {
     // cluster lets the stylesheet size it to its contents instead.
     if (controls) controls.classList.add("bws-anim-host");
 
-    const hasAnimation = !!item.getFlag(MODULE_ID, "jb2aAnimation");
+    // A spell flagged before playback moved to SVA has no recipe yet; give it one so
+    // the next cast animates. The write re-renders the sheet once, then finds nothing
+    // to do. Never awaited: the render must not wait on a document update.
+    syncAnimationRecipe(item).catch((err) =>
+      console.warn("Blizzard's Wondrous Spellbook | Could not sync the SVA recipe", err)
+    );
+
+    const hasAnimation = !!getAnimationPath(item);
     const button = document.createElement("button");
     button.type = "button";
     button.className = `bws-anim-button${hasAnimation ? " is-set" : ""}`;

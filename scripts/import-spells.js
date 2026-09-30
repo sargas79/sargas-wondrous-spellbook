@@ -17,7 +17,7 @@
  */
 
 import { BOOK_KINDS, MODULE_ID } from "./constants.js";
-import { ANIMATION_FLAG } from "./animation-config.js";
+import { getAnimationPath } from "./animation-config.js";
 import {
   MAX_RANK,
   getRankBadge,
@@ -318,7 +318,7 @@ export async function collectActorSpells(actor, { kind = BOOK_KINDS.SPELLS } = {
     const rarity = match ? match.rarity : getSpellRarity(item);
     // Kept through the import so a configured animation survives the round trip out to
     // a book and back into another sheet.
-    const animation = item.getFlag?.(MODULE_ID, ANIMATION_FLAG) ?? "";
+    const animation = getAnimationPath(item);
 
     if (!match) unlinked++;
     total++;

@@ -1,19 +1,24 @@
 /**
- * JB2A / Sequencer animation support.
+ * JB2A animation support, played through Sargas Visual Automation (SVA).
  *
- * Every entry point here is conditional on both JB2A and Sequencer being active.
+ * Every entry point here is conditional on both JB2A and SVA being active.
  * Availability is re-checked on each call rather than cached at init, so enabling
  * either module mid-session makes the controls appear on the next render.
  *
  * The animation path is stored as a flag on the *spell item owned by the actor*,
- * not on the spellbook journal: the spellbook is storage only, and the animation
- * fires when the actor casts that item from their character sheet.
+ * not on the spellbook journal: the spellbook is storage only. The same choice is
+ * written to the item as an SVA recipe, and SVA's own automation plays it when the
+ * actor casts that item from their character sheet. This module never plays anything
+ * itself, so a spell animates exactly once however it was configured.
  */
 
 import { MODULE_ID } from "./constants.js";
 
-/** Flag key holding the Sequencer database path or file path. */
+/** Flag key holding the JB2A database path or file path. */
 export const ANIMATION_FLAG = "jb2aAnimation";
+
+/** Module id of Sargas Visual Automation, which plays the effects for us. */
+export const SVA_MODULE_ID = "sargas-visual-automation";
 
 /**
  * Module ids of the JB2A libraries we can read effects from, most complete first.
@@ -31,7 +36,23 @@ export function getActiveAnimationLibrary() {
 }
 
 /**
- * Are a JB2A library and Sequencer both installed and active right now?
+ * The SVA public API, once the module is active and has finished initialising.
+ *
+ * SVA attaches its areas (`db`, `ui`, `sequence`...) to the api object during its
+ * own init, so an api object without `sequence` belongs to a module that is still
+ * starting up and cannot play anything yet.
+ *
+ * @returns {object|null} The api object, or null when SVA cannot be used.
+ */
+export function getSVA() {
+  const module = game.modules.get(SVA_MODULE_ID);
+  if (!module?.active) return null;
+  const api = module.api ?? globalThis.SVA;
+  return typeof api?.sequence === "function" ? api : null;
+}
+
+/**
+ * Are a JB2A library and SVA both installed and active right now?
  *
  * Deliberately not memoised: a GM can enable either module mid-session and the
  * controls must appear on the next render without a reload.
@@ -39,42 +60,98 @@ export function getActiveAnimationLibrary() {
  * @returns {boolean} True when animation features can be used.
  */
 export function getAnimationsAvailable() {
-  const sequencerActive = game.modules.get("sequencer")?.active;
-  return !!(getActiveAnimationLibrary() && sequencerActive);
+  return !!(getActiveAnimationLibrary() && getSVA());
+}
+
+/**
+ * The SVA recipe stored on an item, or null when there is none (or SVA is unavailable).
+ * @param {object} item An owned Item document.
+ * @returns {object|null}
+ */
+function getItemRecipe(item) {
+  try {
+    return getSVA()?.automation?.getItemRecipe?.(item) ?? null;
+  } catch (err) {
+    console.warn("Blizzard's Wondrous Spellbook | Could not read the SVA recipe", err);
+    return null;
+  }
 }
 
 /**
  * Read the animation path stored on a spell item.
+ *
+ * While SVA is active its recipe is the source of truth: the user may have changed
+ * the animation in SVA's own editor since the gear last wrote it. The module's flag
+ * is the fallback, kept so the choice survives SVA being disabled and so the sheet
+ * importer can still carry it into a book.
+ *
  * @param {object} item An owned Item document.
  * @returns {string} The stored path, or an empty string.
  */
 export function getAnimationPath(item) {
+  const animation = getItemRecipe(item)?.animation;
+  if (typeof animation === "string" && animation) return animation;
   return item?.getFlag?.(MODULE_ID, ANIMATION_FLAG) ?? "";
 }
 
-/** Most suggestions put into the datalist; the browser filters them as the user types. */
-const MAX_SUGGESTIONS = 3000;
+/**
+ * Build the SVA recipe for a path: the effect on the caster's token when the spell is
+ * cast, which is what the spellbook's single-path choice has always meant.
+ * @param {string} path JB2A database path or file URL.
+ * @returns {object} A plain-JSON SVA Recipe.
+ */
+export function buildAnimationRecipe(path) {
+  const castEvent = getSVA()?.EVENT_TYPES?.CAST ?? "cast";
+  return {
+    version: 1,
+    preset: "onToken",
+    animation: path,
+    options: { target: "source" },
+    triggers: [castEvent]
+  };
+}
 
 /**
- * Suggest Sequencer database paths for the autocomplete list.
+ * Give a spell flagged by an older release, before playback moved to SVA, its recipe.
  *
- * Read from Sequencer's flattened entry list, which holds full dotted paths such as
- * `jb2a.fire_bolt.orange`. `getPathsUnder` returns only the next path segment, so the
- * list built from it offered `jb2a.fire_bolt` and never a path that plays anything.
+ * Only a spell with a path and *no* recipe at all is touched. One that already has a
+ * recipe is left alone whatever it plays: SVA's editor may have changed it since, and
+ * rewriting it on every sheet render would fight that edit.
  *
- * @param {string} [prefix="jb2a"] Database namespace to enumerate.
- * @returns {string[]} Known full paths under the namespace, or an empty array.
+ * @param {object} item An owned Item document.
+ * @returns {Promise<boolean>} True when a recipe was written.
  */
-function getSuggestedPaths(prefix = "jb2a") {
+export async function syncAnimationRecipe(item) {
+  const automation = getSVA()?.automation;
+  if (!item?.isOwner || typeof automation?.setItemRecipe !== "function") return false;
+  const path = item.getFlag?.(MODULE_ID, ANIMATION_FLAG);
+  if (!path || getItemRecipe(item)) return false;
+  await automation.setItemRecipe(item, buildAnimationRecipe(path));
+  return true;
+}
+
+/** Most suggestions put into the datalist for one query. */
+const MAX_SUGGESTIONS = 50;
+
+/**
+ * Suggest JB2A database paths matching what the user has typed so far.
+ *
+ * SVA's catalog search is ranked and fuzzy, and only returns leaves, so every
+ * suggestion is a path that actually plays something.
+ *
+ * @param {string} query Text typed into the path field.
+ * @returns {string[]} Matching full paths, best first, or an empty array.
+ */
+function getSuggestedPaths(query) {
   try {
-    const db = globalThis.Sequencer?.Database;
-    if (!db) return [];
-    const all = db.publicFlattenedSimpleEntries ?? db.publicFlattenedEntries ?? db.flattenedEntries;
-    if (!Array.isArray(all)) return [];
-    const namespace = `${prefix}.`;
-    return all.filter((path) => String(path).startsWith(namespace)).slice(0, MAX_SUGGESTIONS);
+    const db = getSVA()?.db;
+    if (!db?.available || !query?.trim()) return [];
+    return db
+      .search(query, { limit: MAX_SUGGESTIONS })
+      .map((entry) => entry?.path)
+      .filter((path) => typeof path === "string" && path);
   } catch (err) {
-    console.warn("Blizzard's Wondrous Spellbook | Could not read the Sequencer database", err);
+    console.warn("Blizzard's Wondrous Spellbook | Could not search the JB2A catalog", err);
     return [];
   }
 }
@@ -82,7 +159,7 @@ function getSuggestedPaths(prefix = "jb2a") {
 /**
  * Open the animation configuration dialog for an owned spell item.
  *
- * No-ops with a notification if JB2A or Sequencer went inactive between the button
+ * No-ops with a notification if JB2A or SVA went inactive between the button
  * rendering and the click landing.
  *
  * @param {object} item An owned SpellPF2e document on an actor.
@@ -96,7 +173,6 @@ export async function openAnimationConfigDialog(item) {
   if (!item) return;
 
   const current = getAnimationPath(item);
-  const suggestions = getSuggestedPaths();
   const listId = `bws-anim-paths-${foundry.utils.randomID()}`;
 
   const content = `
@@ -116,12 +192,10 @@ export async function openAnimationConfigDialog(item) {
       <input id="bws-anim-path" type="text" name="path" list="${listId}"
              value="${foundry.utils.escapeHTML(current)}"
              placeholder="${game.i18n.localize("BWS.Anim.PathPlaceholder")}" autocomplete="off" />
-      <datalist id="${listId}">
-        ${suggestions.map((p) => `<option value="${foundry.utils.escapeHTML(p)}"></option>`).join("")}
-      </datalist>
+      <datalist id="${listId}"></datalist>
       <p class="bws-anim-hint">${game.i18n.localize("BWS.Anim.Hint")}</p>
       <button type="button" class="bws-anim-browse">
-        <i class="fa-solid fa-folder-open"></i> ${game.i18n.localize("BWS.Anim.Browse")}
+        <i class="fa-solid fa-film"></i> ${game.i18n.localize("BWS.Anim.Browse")}
       </button>
     </div>
   `;
@@ -152,11 +226,39 @@ export async function openAnimationConfigDialog(item) {
       ],
       rejectClose: false,
       render: (_event, dialog) => {
+        const input = dialog.element.querySelector("#bws-anim-path");
+        const datalist = dialog.element.querySelector(`#${listId}`);
+
+        // The catalog holds thousands of leaves, so the datalist is filled per query
+        // from SVA's ranked search instead of listing everything up front.
+        const refreshSuggestions = () => {
+          if (!input || !datalist) return;
+          datalist.replaceChildren(
+            ...getSuggestedPaths(input.value).map((path) => {
+              const option = document.createElement("option");
+              option.value = path;
+              return option;
+            })
+          );
+        };
+        input?.addEventListener("input", refreshSuggestions);
+        refreshSuggestions();
+
+        // SVA's animation browser in picker mode: choosing a card closes the browser
+        // and hands the path back, which lands in the field ready to be saved.
         dialog.element.querySelector(".bws-anim-browse")?.addEventListener("click", () => {
           try {
-            globalThis.Sequencer?.DatabaseViewer?.show?.();
+            getSVA()?.ui?.openBrowser?.({
+              path: input?.value?.trim() || undefined,
+              onPick: (path) => {
+                if (!input || typeof path !== "string") return;
+                input.value = path;
+                refreshSuggestions();
+                input.focus();
+              }
+            });
           } catch (err) {
-            console.warn("Blizzard's Wondrous Spellbook | Could not open the Database Viewer", err);
+            console.warn("Blizzard's Wondrous Spellbook | Could not open the animation browser", err);
           }
         });
       }
@@ -168,107 +270,32 @@ export async function openAnimationConfigDialog(item) {
 }
 
 /**
- * Persist (or clear) the animation path on a spell item.
+ * Persist (or clear) the animation path on a spell item, and the SVA recipe with it.
+ *
+ * Saving a path the recipe already plays leaves the recipe alone, so stages, outcomes
+ * or a sound added in SVA's editor around that animation are not flattened away. A
+ * different path replaces the recipe. Clearing removes both the flag and the recipe.
+ *
  * @param {object} item An owned Item document.
- * @param {string} path Sequencer database path. An empty string clears the flag.
+ * @param {string} path JB2A database path or file URL. An empty string clears the flag.
  * @returns {Promise<void>}
  */
 export async function setAnimationPath(item, path) {
   try {
+    const automation = getSVA()?.automation;
     if (path) {
       await item.setFlag(MODULE_ID, ANIMATION_FLAG, path);
+      if (getItemRecipe(item)?.animation !== path) {
+        await automation?.setItemRecipe?.(item, buildAnimationRecipe(path));
+      }
       ui.notifications.info(game.i18n.format("BWS.Anim.Saved", { spell: item.name }));
     } else {
       await item.unsetFlag(MODULE_ID, ANIMATION_FLAG);
+      if (getItemRecipe(item)) await automation?.setItemRecipe?.(item, null);
       ui.notifications.info(game.i18n.format("BWS.Anim.Cleared", { spell: item.name }));
     }
   } catch (err) {
     console.error("Blizzard's Wondrous Spellbook | Failed to write the animation flag", err);
     ui.notifications.error(game.i18n.localize("BWS.Error.AnimSaveFailed"));
   }
-}
-
-/** Roll option PF2e adds to a spell card's origin when the spell is actually cast. */
-const CAST_ROLL_OPTION = "origin:action:slug:cast-a-spell";
-
-/**
- * Recently played animations, keyed by item uuid, used to swallow a card that is
- * posted twice for one cast.
- * @type {Map<string, number>}
- */
-const _recentlyPlayed = new Map();
-const DEDUPE_WINDOW_MS = 1500;
-
-/**
- * Has this item already animated within the dedupe window?
- * @param {string} key Item uuid.
- * @returns {boolean}
- */
-function isDuplicate(key) {
-  const now = Date.now();
-  for (const [k, t] of _recentlyPlayed) if (now - t > DEDUPE_WINDOW_MS) _recentlyPlayed.delete(k);
-  if (_recentlyPlayed.has(key)) return true;
-  _recentlyPlayed.set(key, now);
-  return false;
-}
-
-/**
- * Play the configured animation for a cast spell.
- *
- * Silently does nothing when animations are unavailable, so a spellbook that was
- * built while JB2A was active keeps working (minus the visuals) after it is disabled.
- * The stored flag is never removed.
- *
- * @param {object} spell The cast SpellPF2e item.
- * @param {object} [actor] The casting actor. Defaults to the spell's parent.
- * @returns {Promise<void>}
- */
-export async function playSpellAnimation(spell, actor = spell?.actor) {
-  if (!getAnimationsAvailable()) return;
-
-  const path = getAnimationPath(spell);
-  if (!path) return;
-  if (isDuplicate(spell.uuid)) return;
-
-  try {
-    // The caster's own placed token; Sequencer needs something with a canvas position.
-    // No fallback to the user's selection: that may be a different creature entirely.
-    const target = actor?.getActiveTokens?.(true, false)?.[0] ?? actor?.token?.object;
-    if (!target) return;
-
-    await new Sequence().effect().file(path).atLocation(target).play();
-  } catch (err) {
-    // A bad path or a mid-cast module toggle must never break the cast itself.
-    console.error("Blizzard's Wondrous Spellbook | Animation playback failed", err);
-  }
-}
-
-/**
- * Register the spell-cast listener that triggers animation playback.
- *
- * PF2e fires no dedicated cast hook (8.5.1 has none), but every cast posts a chat card
- * whose `flags.pf2e.origin` names the spell item. That card is the signal, read here.
- * `playSpellAnimation` still de-duplicates, so a card re-posted within a moment of the
- * first does not animate twice.
- */
-export function registerAnimationHooks() {
-  Hooks.on("createChatMessage", async (message) => {
-    // Only the author plays their own animation, otherwise every client fires it.
-    if (message.author?.id !== game.user.id) return;
-    if (!getAnimationsAvailable()) return;
-
-    try {
-      const origin = message.flags?.pf2e?.origin;
-      if (origin?.type !== "spell" || !origin?.uuid) return;
-      // Sharing a spell to chat posts the same card. PF2e adds this roll option only
-      // when the spell is actually cast, so a description posted to chat stays quiet.
-      if (!origin.rollOptions?.includes(CAST_ROLL_OPTION)) return;
-
-      const spell = await fromUuid(origin.uuid);
-      if (!spell?.actor) return;
-      await playSpellAnimation(spell, spell.actor);
-    } catch (err) {
-      console.warn("Blizzard's Wondrous Spellbook | Chat-message animation fallback failed", err);
-    }
-  });
 }
