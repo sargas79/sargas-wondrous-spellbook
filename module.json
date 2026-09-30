@@ -38,9 +38,9 @@
     ],
     "recommends": [
       {
-        "id": "sequencer",
+        "id": "sargas-visual-automation",
         "type": "module",
-        "reason": "Required to play spell animations. The module works without it; animation controls simply do not appear."
+        "reason": "Plays spell animations from JB2A. The module works without it; animation controls simply do not appear."
       }
     ]
   },

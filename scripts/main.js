@@ -2,7 +2,7 @@
  * Blizzard's Wondrous Spellbook - module entry point.
  *
  * Registers settings and hooks at `init`, then wires up the scene control button, the PF2e
- * character sheet integration and the spell-cast animation listeners at `ready`.
+ * character sheet integration at `ready`.
  */
 
 import { MODULE_ID, SETTINGS, DEFAULT_FOLDER_NAME, DEFAULT_LOOT_FOLDER_NAME } from "./constants.js";
@@ -12,7 +12,7 @@ const TOOL_NAME = "bws-spellbook";
 import { SpellbookApp } from "./spellbook-app.js";
 import { MySpellbooksApp, registerBrowserRefreshHooks } from "./my-spellbooks-app.js";
 import { injectSheetControls, openSendToSlotDialog, resolveTargetActor } from "./slot-manager.js";
-import { getAnimationsAvailable, registerAnimationHooks } from "./animation-config.js";
+import { SVA_MODULE_ID, getAnimationsAvailable, migrateLegacyAnimations } from "./animation-config.js";
 import { invalidateSpellCache, listSpellSources, querySpells } from "./spell-query.js";
 import { LootGeneratorApp } from "./loot-generator-app.js";
 import { ImportApp, addImportHeaderButton, injectImportButton, openImport } from "./import-app.js";
@@ -212,9 +212,19 @@ Hooks.once("ready", () => {
     return;
   }
 
-  registerAnimationHooks();
   registerBrowserRefreshHooks();
   registerLootBookContextMenu();
+
+  // Spells given an animation before playback moved to SVA have no SVA recipe yet.
+  // SVA fires this once its automation exists; if it was ready before we were, the
+  // api already carries the flag and the migration runs right away.
+  const sva = game.modules.get(SVA_MODULE_ID);
+  const migrate = () =>
+    migrateLegacyAnimations().catch((err) => console.error(`${MODULE_ID} | Animation migration failed`, err));
+  if (sva?.active) {
+    if (sva.api?.ready) migrate();
+    else Hooks.once(`${SVA_MODULE_ID}.ready`, migrate);
+  }
 
   // The spell cache is built from compendium contents, so drop it when a pack changes.
   for (const hook of ["createItem", "updateItem", "deleteItem"]) {
@@ -259,7 +269,7 @@ Hooks.on("renderItemSheetPF2e", (app, html) =>
   guarded("Loot spellbook sheet integration", () => injectLootBookButton(app, html))
 );
 
-// PF2e's character sheet render hook. Availability of JB2A/Sequencer is re-checked
+// PF2e's character sheet render hook. Availability of JB2A/SVA is re-checked
 // inside the handler on every render, so toggling either module mid-session takes
 // effect without a reload. The setting gates the animation controls only: the import
 // button is not part of that integration and must not vanish with it.

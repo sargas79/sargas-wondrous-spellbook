@@ -34,9 +34,9 @@ and **crafter's blueprints**.
 - **Loot Spellbooks** — roll a random, level-appropriate spellbook as treasure. The result
   is a physical PF2e item you can drop in a chest or hand to a party; whoever holds it can
   open it and learn spells straight out of it.
-- **Animations (optional)** — when JB2A *and* Sequencer are both active, spell rows on the
-  character sheet gain a gear button for attaching a Sequencer effect that fires when the spell
-  is cast.
+- **Animations (optional)** — when JB2A *and* Sargas Visual Automation are both active, spell
+  rows on the character sheet gain a gear button for attaching a JB2A effect that fires when the
+  spell is cast.
 
 ---
 
@@ -46,11 +46,12 @@ and **crafter's blueprints**.
 |---|---|
 | **Foundry VTT** | v14 (verified against build 368) |
 | **Game system** | Pathfinder Second Edition (verified against 8.5.1) |
-| **Sequencer** | Optional |
-| **JB2A** (`jb2a_patreon`, or the free `JB2A_DnD5e`) | Optional, never installed for you |
+| **Sargas Visual Automation** (`sargas-visual-automation`) | Optional |
+| **JB2A** (`jb2a_patreon`, or the free `JB2A_DnD5e`) | Optional, never installed for you; SVA detects which one is present |
 
-Sequencer and JB2A are **soft dependencies**. Without them the module works normally and every
-animation control is simply not rendered — no warnings, no broken buttons.
+Sargas Visual Automation (SVA) and JB2A are **soft dependencies**. Without them the module works
+normally and every animation control is simply not rendered — no warnings, no broken buttons.
+SVA plays JB2A animations on its own; Sequencer is not used and need not be installed.
 
 JB2A is deliberately **not** declared in the manifest's `relationships`, so Foundry never offers
 to install it alongside this module. If you already own the Patreon library it is used; the free
@@ -215,16 +216,29 @@ remembers which characters have already copied a spell out of it.
 
 ### Attaching an animation
 
-With JB2A and Sequencer both active, each spell row on the PF2e character sheet grows a small
-gear button. Click it, enter a Sequencer database path (the field autocompletes against the
-Sequencer database, and there's a button to open the Database Viewer), and save. The effect
-plays on the caster's token when that spell is cast from the sheet. Posting a spell's
-description to chat without casting it does not play the effect, and a caster with no
-token on the current scene plays nothing.
+With JB2A and SVA both active, each spell row on the PF2e character sheet grows a small
+gear button. Click it, enter a JB2A database path (the field autocompletes against SVA's
+catalog search, and there's a button to open SVA's animation browser as a picker), and save.
+The choice is written to the spell as an **SVA recipe** (the `onToken` preset, aimed at the
+caster, triggered by a cast), and SVA's automation plays it when that spell is cast from the
+sheet. This module never plays anything itself, so a spell animates exactly once.
 
-The path is stored as a flag on the actor's spell item. If JB2A or Sequencer is later disabled,
-**the flag is preserved** — the editing controls just disappear and playback is skipped
-silently until both modules are active again.
+Because it is an ordinary SVA recipe, the **Animation** button on the spell's own sheet opens
+it in SVA's editor, where it can be refined with stages, outcomes or a sound. Saving the same
+path again from the gear leaves such a refined recipe untouched; clearing removes the recipe
+only when it still plays the cleared path.
+
+While SVA is active the recipe is what the gear reads, so a spell configured directly in SVA
+shows as set too, and an animation changed in SVA's editor is what the sheet importer carries
+into a book. The path is also stored as a flag on the actor's spell item: if JB2A or SVA is
+later disabled, **the flag is preserved** — the editing controls just disappear until both
+modules are active again. Spells flagged by a release before 1.2.0 have no recipe; the GM's
+client writes one for every such spell in the world once SVA is ready, and a sheet render
+does the same for a synthetic token actor.
+
+Playback is SVA's. If SVA's automation is switched off in its world settings, or the caster
+is below SVA's minimum role to trigger animations, the recipe is stored but nothing plays;
+the gear's dialog warns about the former.
 
 ---
 
@@ -331,7 +345,7 @@ scripts/
   loot-generator.js              Seeded random book rolling, pricing, Item creation
   loot-generator-app.js          Loot Spellbook Generator (GM, ApplicationV2)
   loot-book-app.js               Loot book reader, learn flow, item sheet injection
-  animation-config.js            JB2A/Sequencer detection, config dialog, cast hooks
+  animation-config.js            JB2A/SVA detection, config dialog, cast hooks
 templates/                       Handlebars templates for the above
 tools/check-lang.mjs             CI check that the language file loads in Foundry
 ```
@@ -368,11 +382,9 @@ The importer reads a sheet spell's origin from `_stats.compendiumSource` and fro
 spell name, so a spell keeps its compendium link across both Foundry's move of that field and
 a compendium being renamed or replaced.
 
-PF2e has no dedicated spell-cast hook. The module listens on `createChatMessage` and reads the
-card's `flags.pf2e.origin`, acting only when its roll options include
-`origin:action:slug:cast-a-spell`, which PF2e adds for a real cast but not for a spell posted
-to chat. Only the message's author plays the effect, since Sequencer broadcasts it to
-everyone.
+Spell-cast detection and playback belong to SVA: its PF2e adapter turns the cast card into a
+`cast` event and resolves the item's recipe. The module only writes that recipe (see
+[Attaching an animation](#attaching-an-animation)) and never listens for casts itself.
 
 PF2e 8.x character and item sheets are Application V1, so the Import and Spellbook header
 buttons are added through V1's `get…HeaderButtons` hooks. A DOM fallback is kept for a future
