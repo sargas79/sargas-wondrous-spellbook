@@ -12,7 +12,7 @@ const TOOL_NAME = "bws-spellbook";
 import { SpellbookApp } from "./spellbook-app.js";
 import { MySpellbooksApp, registerBrowserRefreshHooks } from "./my-spellbooks-app.js";
 import { injectSheetControls, openSendToSlotDialog, resolveTargetActor } from "./slot-manager.js";
-import { getAnimationsAvailable } from "./animation-config.js";
+import { SVA_MODULE_ID, getAnimationsAvailable, migrateLegacyAnimations } from "./animation-config.js";
 import { invalidateSpellCache, listSpellSources, querySpells } from "./spell-query.js";
 import { LootGeneratorApp } from "./loot-generator-app.js";
 import { ImportApp, addImportHeaderButton, injectImportButton, openImport } from "./import-app.js";
@@ -214,6 +214,17 @@ Hooks.once("ready", () => {
 
   registerBrowserRefreshHooks();
   registerLootBookContextMenu();
+
+  // Spells given an animation before playback moved to SVA have no SVA recipe yet.
+  // SVA fires this once its automation exists; if it was ready before we were, the
+  // api already carries the flag and the migration runs right away.
+  const sva = game.modules.get(SVA_MODULE_ID);
+  const migrate = () =>
+    migrateLegacyAnimations().catch((err) => console.error(`${MODULE_ID} | Animation migration failed`, err));
+  if (sva?.active) {
+    if (sva.api?.ready) migrate();
+    else Hooks.once(`${SVA_MODULE_ID}.ready`, migrate);
+  }
 
   // The spell cache is built from compendium contents, so drop it when a pack changes.
   for (const hook of ["createItem", "updateItem", "deleteItem"]) {

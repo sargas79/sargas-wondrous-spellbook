@@ -20,20 +20,8 @@ export const ANIMATION_FLAG = "jb2aAnimation";
 /** Module id of Sargas Visual Automation, which plays the effects for us. */
 export const SVA_MODULE_ID = "sargas-visual-automation";
 
-/**
- * Module ids of the JB2A libraries we can read effects from, most complete first.
- * JB2A is never declared as a dependency, so Foundry never offers to install it;
- * we only light up the animation features if the user already has one installed.
- */
-const JB2A_MODULE_IDS = ["jb2a_patreon", "JB2A_DnD5e"];
-
-/**
- * Is a JB2A library active, and which one?
- * @returns {string|null} The active module's id, or null when none is present.
- */
-export function getActiveAnimationLibrary() {
-  return JB2A_MODULE_IDS.find((id) => game.modules.get(id)?.active) ?? null;
-}
+/** SVA's world setting that turns its automation on or off. */
+const SVA_AUTOMATION_SETTING = "automationEnabled";
 
 /**
  * The SVA public API, once the module is active and has finished initialising.
@@ -52,15 +40,43 @@ export function getSVA() {
 }
 
 /**
- * Are a JB2A library and SVA both installed and active right now?
+ * Which JB2A library SVA is reading, if any.
  *
- * Deliberately not memoised: a GM can enable either module mid-session and the
- * controls must appear on the next render without a reload.
+ * SVA owns provider detection (Patreon or free module, custom asset location), so
+ * this module never keeps its own list of JB2A module ids. JB2A is never declared
+ * as a dependency either, so Foundry never offers to install it.
+ *
+ * @returns {string|null} The provider module's id, or null when none is usable.
+ */
+export function getActiveAnimationLibrary() {
+  return getSVA()?.db?.provider ?? null;
+}
+
+/**
+ * Can animations be configured and played right now: SVA active, its JB2A catalog
+ * loaded.
+ *
+ * Deliberately not memoised: the catalog finishes loading after `ready`, and a GM
+ * can enable a module mid-session, so the controls must appear on the next render
+ * without a reload.
  *
  * @returns {boolean} True when animation features can be used.
  */
 export function getAnimationsAvailable() {
-  return !!(getActiveAnimationLibrary() && getSVA());
+  return !!getSVA()?.db?.available;
+}
+
+/**
+ * Is SVA's automation switched on in this world? Playback goes through it, so an
+ * animation configured while it is off is stored but never plays.
+ * @returns {boolean}
+ */
+export function isAutomationEnabled() {
+  try {
+    return game.settings.get(SVA_MODULE_ID, SVA_AUTOMATION_SETTING) !== false;
+  } catch {
+    return true;
+  }
 }
 
 /**
@@ -112,11 +128,24 @@ export function buildAnimationRecipe(path) {
 }
 
 /**
+ * Does the item carry an SVA recipe flag at all, valid or not?
+ *
+ * The raw flag is checked rather than SVA's validated getter on purpose: that getter
+ * returns null for a recipe SVA rejects, and treating "invalid" as "missing" would
+ * overwrite a hand-edited recipe, or loop forever if SVA kept rejecting what we wrote.
+ *
+ * @param {object} item An Item document.
+ * @returns {boolean}
+ */
+function hasRecipeFlag(item) {
+  return item?.flags?.[SVA_MODULE_ID]?.recipe !== undefined;
+}
+
+/**
  * Give a spell flagged by an older release, before playback moved to SVA, its recipe.
  *
- * Only a spell with a path and *no* recipe at all is touched. One that already has a
- * recipe is left alone whatever it plays: SVA's editor may have changed it since, and
- * rewriting it on every sheet render would fight that edit.
+ * Only a spell with a path and *no* recipe flag at all is touched. One that already
+ * has a recipe is left alone whatever it plays: SVA's editor may have changed it since.
  *
  * @param {object} item An owned Item document.
  * @returns {Promise<boolean>} True when a recipe was written.
@@ -125,9 +154,35 @@ export async function syncAnimationRecipe(item) {
   const automation = getSVA()?.automation;
   if (!item?.isOwner || typeof automation?.setItemRecipe !== "function") return false;
   const path = item.getFlag?.(MODULE_ID, ANIMATION_FLAG);
-  if (!path || getItemRecipe(item)) return false;
+  if (!path || hasRecipeFlag(item)) return false;
   await automation.setItemRecipe(item, buildAnimationRecipe(path));
   return true;
+}
+
+/**
+ * One-shot migration, run once SVA is ready: every spell in the world with a stored
+ * path and no SVA recipe gets one, so casts animate again without each sheet having
+ * to be opened first. Only the GM runs it, so several clients never race on the same
+ * items; `syncAnimationRecipe` on sheet render remains as the backstop for synthetic
+ * token actors, which are not in the world collection.
+ *
+ * @returns {Promise<number>} How many recipes were written.
+ */
+export async function migrateLegacyAnimations() {
+  if (!game.user?.isGM || !getSVA()?.automation) return 0;
+  let written = 0;
+  for (const actor of game.actors ?? []) {
+    for (const item of actor.items ?? []) {
+      if (item.type !== "spell" || !item.getFlag?.(MODULE_ID, ANIMATION_FLAG)) continue;
+      try {
+        if (await syncAnimationRecipe(item)) written++;
+      } catch (err) {
+        console.warn(`Blizzard's Wondrous Spellbook | Could not migrate "${item.name}"`, err);
+      }
+    }
+  }
+  if (written) console.log(`Blizzard's Wondrous Spellbook | Wrote ${written} SVA recipe(s) for stored animations`);
+  return written;
 }
 
 /** Most suggestions put into the datalist for one query. */
@@ -194,6 +249,11 @@ export async function openAnimationConfigDialog(item) {
              placeholder="${game.i18n.localize("BWS.Anim.PathPlaceholder")}" autocomplete="off" />
       <datalist id="${listId}"></datalist>
       <p class="bws-anim-hint">${game.i18n.localize("BWS.Anim.Hint")}</p>
+      ${
+        isAutomationEnabled()
+          ? ""
+          : `<p class="bws-anim-hint bws-anim-warning"><i class="fa-solid fa-triangle-exclamation"></i> ${game.i18n.localize("BWS.Anim.AutomationOff")}</p>`
+      }
       <button type="button" class="bws-anim-browse">
         <i class="fa-solid fa-film"></i> ${game.i18n.localize("BWS.Anim.Browse")}
       </button>
@@ -272,9 +332,11 @@ export async function openAnimationConfigDialog(item) {
 /**
  * Persist (or clear) the animation path on a spell item, and the SVA recipe with it.
  *
- * Saving a path the recipe already plays leaves the recipe alone, so stages, outcomes
- * or a sound added in SVA's editor around that animation are not flattened away. A
- * different path replaces the recipe. Clearing removes both the flag and the recipe.
+ * The recipe is written first: it is what plays, and SVA may reject it. If it does,
+ * the flag is left as it was, so the two never disagree about which animation the
+ * spell has. Saving a path the recipe already plays leaves the recipe alone, so
+ * stages, outcomes or a sound added in SVA's editor around that animation are not
+ * flattened away. A different path replaces the recipe. Clearing removes both.
  *
  * @param {object} item An owned Item document.
  * @param {string} path JB2A database path or file URL. An empty string clears the flag.
@@ -284,14 +346,14 @@ export async function setAnimationPath(item, path) {
   try {
     const automation = getSVA()?.automation;
     if (path) {
-      await item.setFlag(MODULE_ID, ANIMATION_FLAG, path);
       if (getItemRecipe(item)?.animation !== path) {
         await automation?.setItemRecipe?.(item, buildAnimationRecipe(path));
       }
+      await item.setFlag(MODULE_ID, ANIMATION_FLAG, path);
       ui.notifications.info(game.i18n.format("BWS.Anim.Saved", { spell: item.name }));
     } else {
+      if (hasRecipeFlag(item)) await automation?.setItemRecipe?.(item, null);
       await item.unsetFlag(MODULE_ID, ANIMATION_FLAG);
-      if (getItemRecipe(item)) await automation?.setItemRecipe?.(item, null);
       ui.notifications.info(game.i18n.format("BWS.Anim.Cleared", { spell: item.name }));
     }
   } catch (err) {

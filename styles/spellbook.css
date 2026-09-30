@@ -976,6 +976,10 @@
   margin: -8px 0 0;
 }
 
+.bws-anim-warning {
+  color: var(--color-level-warning, #a15b00);
+}
+
 .bws-anim-browse {
   align-items: center;
   appearance: none;

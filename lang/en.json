@@ -206,6 +206,7 @@
   "BWS.Anim.Cleared": "Animation cleared for {spell}.",
   "BWS.Anim.Unavailable": "JB2A and Sargas Visual Automation must both be active to edit animations.",
   "BWS.Anim.Current": "Current: {path}",
+  "BWS.Anim.AutomationOff": "Sargas Visual Automation's automation is switched off in this world, so this animation will be saved but will not play until a GM turns it back on in SVA's settings.",
   "BWS.Anim.None": "No animation set",
 
   "BWS.Notify.NoName": "Enter a name for the spellbook before saving.",

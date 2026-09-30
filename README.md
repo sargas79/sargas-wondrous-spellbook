@@ -47,7 +47,7 @@ and **crafter's blueprints**.
 | **Foundry VTT** | v14 (verified against build 368) |
 | **Game system** | Pathfinder Second Edition (verified against 8.5.1) |
 | **Sargas Visual Automation** (`sargas-visual-automation`) | Optional |
-| **JB2A** (`jb2a_patreon`, or the free `JB2A_DnD5e`) | Optional, never installed for you |
+| **JB2A** (`jb2a_patreon`, or the free `JB2A_DnD5e`) | Optional, never installed for you; SVA detects which one is present |
 
 Sargas Visual Automation (SVA) and JB2A are **soft dependencies**. Without them the module works
 normally and every animation control is simply not rendered — no warnings, no broken buttons.
@@ -232,8 +232,13 @@ While SVA is active the recipe is what the gear reads, so a spell configured dir
 shows as set too, and an animation changed in SVA's editor is what the sheet importer carries
 into a book. The path is also stored as a flag on the actor's spell item: if JB2A or SVA is
 later disabled, **the flag is preserved** — the editing controls just disappear until both
-modules are active again. Spells flagged by an older release, which have no recipe yet, gain
-one the next time their sheet renders.
+modules are active again. Spells flagged by a release before 1.2.0 have no recipe; the GM's
+client writes one for every such spell in the world once SVA is ready, and a sheet render
+does the same for a synthetic token actor.
+
+Playback is SVA's. If SVA's automation is switched off in its world settings, or the caster
+is below SVA's minimum role to trigger animations, the recipe is stored but nothing plays;
+the gear's dialog warns about the former.
 
 ---
 

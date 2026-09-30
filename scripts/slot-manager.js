@@ -466,9 +466,10 @@ export function injectSheetControls(app, html) {
     // cluster lets the stylesheet size it to its contents instead.
     if (controls) controls.classList.add("bws-anim-host");
 
-    // A spell flagged before playback moved to SVA has no recipe yet; give it one so
-    // the next cast animates. The write re-renders the sheet once, then finds nothing
-    // to do. Never awaited: the render must not wait on a document update.
+    // Backstop for the one-shot migration at ready, which only walks world actors: a
+    // synthetic token actor's spell flagged before playback moved to SVA gains its
+    // recipe here. A cheap raw-flag check, and a no-op once the recipe exists. Never
+    // awaited: the render must not wait on a document update.
     syncAnimationRecipe(item).catch((err) =>
       console.warn("Blizzard's Wondrous Spellbook | Could not sync the SVA recipe", err)
     );
