@@ -64,13 +64,13 @@ library is used only when it is the sole one installed.
 Paste this manifest URL into Foundry's **Add-on Modules → Install Module** dialog:
 
 ```
-https://github.com/sargas79/wondrous-spellbook/releases/latest/download/module.json
+https://github.com/sargas79/sargas-wondrous-spellbook/releases/latest/download/module.json
 ```
 
 Or clone into your Foundry `Data/modules` directory:
 
 ```bash
-git clone https://github.com/sargas79/wondrous-spellbook.git blizzards-wondrous-spellbook
+git clone https://github.com/sargas79/sargas-wondrous-spellbook.git sargas-wondrous-spellbook
 ```
 
 ---
@@ -283,7 +283,7 @@ cannot create folders, so a book a player saves before the folder exists lands a
 The module exposes an API on its module entry and as a global:
 
 ```js
-const api = game.modules.get("blizzards-wondrous-spellbook").api;
+const api = game.modules.get("sargas-wondrous-spellbook").api;
 
 api.openCreator();                          // open a blank Spellbook Creator
 api.openBrowser();                          // open My Spellbooks
@@ -316,7 +316,7 @@ writes — to restrict a headless roll to particular books.
 `generateLootSpellbook` writes nothing, so it can be driven from a RollTable macro:
 
 ```js
-const api = game.modules.get("blizzards-wondrous-spellbook").api;
+const api = game.modules.get("sargas-wondrous-spellbook").api;
 const roll = await api.generateLootSpellbook({ level: 12, tradition: "occult" });
 await api.createLootSpellbook({ ...roll, actors: [game.actors.getName("Treasure Chest")] });
 ```
