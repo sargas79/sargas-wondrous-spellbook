@@ -1,5 +1,5 @@
 {
-  "id": "blizzards-wondrous-spellbook",
+  "id": "sargas-wondrous-spellbook",
   "title": "Blizzard's Wondrous Spellbook",
   "description": "A spellbook creator and slot-fill tool for the Pathfinder Second Edition system.",
   "version": "1.0.0",
@@ -45,8 +45,8 @@
     ]
   },
   "socket": false,
-  "url": "https://github.com/sargas79/wondrous-spellbook",
-  "manifest": "https://github.com/sargas79/wondrous-spellbook/releases/latest/download/module.json",
-  "download": "https://github.com/sargas79/wondrous-spellbook/releases/latest/download/module.zip",
+  "url": "https://github.com/sargas79/sargas-wondrous-spellbook",
+  "manifest": "https://github.com/sargas79/sargas-wondrous-spellbook/releases/latest/download/module.json",
+  "download": "https://github.com/sargas79/sargas-wondrous-spellbook/releases/latest/download/module.zip",
   "license": "LICENSE"
 }

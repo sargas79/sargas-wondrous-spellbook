@@ -6,7 +6,7 @@
  */
 
 /** Module id, used for flags, settings, template paths and socket names. */
-export const MODULE_ID = "blizzards-wondrous-spellbook";
+export const MODULE_ID = "sargas-wondrous-spellbook";
 
 /** Root path for this module's assets inside the Foundry data directory. */
 export const MODULE_PATH = `modules/${MODULE_ID}`;
