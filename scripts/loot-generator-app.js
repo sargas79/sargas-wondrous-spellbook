@@ -85,11 +85,11 @@ export class LootGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
 
   /** @inheritdoc */
   static DEFAULT_OPTIONS = {
-    id: "bws-loot-generator",
-    classes: ["bws", "bws-loot-generator"],
+    id: "sws-loot-generator",
+    classes: ["sws", "sws-loot-generator"],
     tag: "div",
     window: {
-      title: "BWS.Loot.Title",
+      title: "SWS.Loot.Title",
       icon: "fa-solid fa-dice-d20",
       resizable: true
     },
@@ -107,7 +107,7 @@ export class LootGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
 
   /** @inheritdoc */
   static PARTS = {
-    body: { template: template("loot-generator.hbs"), scrollable: [".bws-loot-preview"] }
+    body: { template: template("loot-generator.hbs"), scrollable: [".sws-loot-preview"] }
   };
 
   /** @inheritdoc */
@@ -136,25 +136,25 @@ export class LootGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
       maxLevel: MAX_LEVEL,
       maxRank: maxRankForLevel(this.level),
       traditions: [
-        { key: "random", label: game.i18n.localize("BWS.Loot.Tradition.random") },
-        { key: "mixed", label: game.i18n.localize("BWS.Loot.Tradition.mixed") },
-        ...TRADITIONS.map((key) => ({ key, label: game.i18n.localize(`BWS.Loot.Tradition.${key}`) }))
+        { key: "random", label: game.i18n.localize("SWS.Loot.Tradition.random") },
+        { key: "mixed", label: game.i18n.localize("SWS.Loot.Tradition.mixed") },
+        ...TRADITIONS.map((key) => ({ key, label: game.i18n.localize(`SWS.Loot.Tradition.${key}`) }))
       ].map((t) => ({ ...t, selected: t.key === this.tradition })),
       profiles: Object.values(PROFILES).map((p) => ({
         key: p.key,
-        label: game.i18n.localize(`BWS.Loot.Profile.${p.key}`),
-        hint: game.i18n.localize(`BWS.Loot.ProfileHint.${p.key}`),
+        label: game.i18n.localize(`SWS.Loot.Profile.${p.key}`),
+        hint: game.i18n.localize(`SWS.Loot.ProfileHint.${p.key}`),
         selected: p.key === this.profile
       })),
       rarities: RARITIES.filter((r) => r !== "unique").map((key) => ({
         key,
-        label: game.i18n.localize(`BWS.Loot.Rarity.${key}`),
+        label: game.i18n.localize(`SWS.Loot.Rarity.${key}`),
         selected: key === this.maxRarity
       })),
       count: this.count ?? "",
       sourceLabel: this.sources.length
-        ? game.i18n.format("BWS.Loot.SourcesSome", { count: this.sources.length })
-        : game.i18n.localize("BWS.Loot.SourcesAll"),
+        ? game.i18n.format("SWS.Loot.SourcesSome", { count: this.sources.length })
+        : game.i18n.localize("SWS.Loot.SourcesAll"),
       includeCantrips: this.includeCantrips,
       includeFocus: this.includeFocus,
       seed: this.seed,
@@ -171,10 +171,10 @@ export class LootGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
       shortfall: this.result?.shortfall ?? 0,
       edited: !!meta?.edited,
       summaryLine: meta
-        ? game.i18n.format("BWS.Loot.SummaryLine", {
+        ? game.i18n.format("SWS.Loot.SummaryLine", {
             count: spells.length,
-            tradition: game.i18n.localize(`BWS.Loot.Tradition.${meta.tradition}`),
-            rarity: game.i18n.localize(`BWS.Loot.Rarity.${meta.rarity}`),
+            tradition: game.i18n.localize(`SWS.Loot.Tradition.${meta.tradition}`),
+            rarity: game.i18n.localize(`SWS.Loot.Rarity.${meta.rarity}`),
             price: estimatePrice(meta, spells)
           })
         : "",
@@ -208,8 +208,8 @@ export class LootGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
       if (this.tradition === "random") this.tradition = result.meta.tradition;
       if (!keepName || !this.bookName.trim()) this.bookName = result.name;
     } catch (err) {
-      console.error("Blizzard's Wondrous Spellbook | Loot generation failed", err);
-      ui.notifications.error(game.i18n.localize("BWS.Loot.RollFailed"));
+      console.error("Sargas Wondrous Spellbook | Loot generation failed", err);
+      ui.notifications.error(game.i18n.localize("SWS.Loot.RollFailed"));
     } finally {
       this.rolling = false;
     }
@@ -317,7 +317,7 @@ export class LootGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
   static async #onPickSources() {
     const sources = await listSpellSources();
     if (!sources.length) {
-      ui.notifications.warn(game.i18n.localize("BWS.Loot.NoSources"));
+      ui.notifications.warn(game.i18n.localize("SWS.Loot.NoSources"));
       return;
     }
 
@@ -333,14 +333,14 @@ export class LootGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
 
     let picked = null;
     await foundry.applications.api.DialogV2.wait({
-      window: { title: game.i18n.localize("BWS.Loot.SourcesTitle"), icon: "fa-solid fa-book-open" },
-      classes: ["bws-dialog", "bws-sources-dialog"],
+      window: { title: game.i18n.localize("SWS.Loot.SourcesTitle"), icon: "fa-solid fa-book-open" },
+      classes: ["sws-dialog", "sws-sources-dialog"],
       content,
       position: { width: 420 },
       buttons: [
         {
           action: "apply",
-          label: game.i18n.localize("BWS.Loot.SourcesApply"),
+          label: game.i18n.localize("SWS.Loot.SourcesApply"),
           icon: "fa-solid fa-check",
           default: true,
           callback: (_event, _button, dialog) => {
@@ -349,7 +349,7 @@ export class LootGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
               .map((box) => box.value);
           }
         },
-        { action: "cancel", label: game.i18n.localize("BWS.Creator.Cancel"), icon: "fa-solid fa-xmark" }
+        { action: "cancel", label: game.i18n.localize("SWS.Creator.Cancel"), icon: "fa-solid fa-xmark" }
       ],
       render: (_event, dialog) => {
         const boxes = () => dialog.element.querySelectorAll("[name='source']");
@@ -367,7 +367,7 @@ export class LootGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
     if (picked === null) return;
 
     if (!picked.length) {
-      ui.notifications.warn(game.i18n.localize("BWS.Loot.NoSourcePicked"));
+      ui.notifications.warn(game.i18n.localize("SWS.Loot.NoSourcePicked"));
       return;
     }
 
@@ -389,7 +389,7 @@ export class LootGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
     try {
       await game.settings.set(MODULE_ID, SETTINGS.LOOT_SOURCES, sources);
     } catch (err) {
-      console.warn("Blizzard's Wondrous Spellbook | Could not store the loot source list", err);
+      console.warn("Sargas Wondrous Spellbook | Could not store the loot source list", err);
     }
   }
 
@@ -407,7 +407,7 @@ export class LootGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
       includeFocus: this.includeFocus
     });
     if (!replacement) {
-      ui.notifications.warn(game.i18n.localize("BWS.Loot.NoReplacement"));
+      ui.notifications.warn(game.i18n.localize("SWS.Loot.NoReplacement"));
       return;
     }
 
@@ -429,12 +429,12 @@ export class LootGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
   /** Write the book to the world or onto the selected actors. */
   static async #onCreate() {
     if (!this.result?.spells.length) {
-      ui.notifications.warn(game.i18n.localize("BWS.Loot.NothingRolled"));
+      ui.notifications.warn(game.i18n.localize("SWS.Loot.NothingRolled"));
       return;
     }
     const name = this.bookName.trim();
     if (!name) {
-      ui.notifications.warn(game.i18n.localize("BWS.Notify.NoName"));
+      ui.notifications.warn(game.i18n.localize("SWS.Notify.NoName"));
       return;
     }
 
@@ -444,7 +444,7 @@ export class LootGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
       // separate book in the same inventory.
       actors = [...new Set((canvas?.tokens?.controlled ?? []).map((t) => t.actor).filter(Boolean))];
       if (!actors.length) {
-        ui.notifications.warn(game.i18n.localize("BWS.Loot.NoSelection"));
+        ui.notifications.warn(game.i18n.localize("SWS.Loot.NoSelection"));
         return;
       }
     }
@@ -459,8 +459,8 @@ export class LootGeneratorApp extends HandlebarsApplicationMixin(ApplicationV2) 
 
     ui.notifications.info(
       actors.length
-        ? game.i18n.format("BWS.Loot.CreatedOnActors", { name, count: created.length })
-        : game.i18n.format("BWS.Loot.CreatedInFolder", { name, folder: getLootFolderName() })
+        ? game.i18n.format("SWS.Loot.CreatedOnActors", { name, count: created.length })
+        : game.i18n.format("SWS.Loot.CreatedInFolder", { name, folder: getLootFolderName() })
     );
     await this.close();
   }

@@ -142,11 +142,11 @@ function matchCompendiumSpell(item, index) {
  * @returns {string} Localised label such as "prepared" or "spontaneous".
  */
 function describeEntryKind(entry) {
-  if (entry.isPrepared) return game.i18n.localize("BWS.Slot.EntryPrepared");
-  if (entry.isSpontaneous) return game.i18n.localize("BWS.Slot.EntrySpontaneous");
-  if (entry.isInnate) return game.i18n.localize("BWS.Slot.EntryInnate");
-  if (entry.isFocusPool) return game.i18n.localize("BWS.Slot.EntryFocus");
-  if (entry.isRitual) return game.i18n.localize("BWS.Slot.EntryRitual");
+  if (entry.isPrepared) return game.i18n.localize("SWS.Slot.EntryPrepared");
+  if (entry.isSpontaneous) return game.i18n.localize("SWS.Slot.EntrySpontaneous");
+  if (entry.isInnate) return game.i18n.localize("SWS.Slot.EntryInnate");
+  if (entry.isFocusPool) return game.i18n.localize("SWS.Slot.EntryFocus");
+  if (entry.isRitual) return game.i18n.localize("SWS.Slot.EntryRitual");
   return "";
 }
 
@@ -183,7 +183,7 @@ function describeRitual(ritual) {
   if (ritual.cost) parts.push(ritual.cost);
   if (ritual.secondaryCasters) {
     parts.push(
-      game.i18n.format("BWS.Ritual.SecondaryCasters", { count: ritual.secondaryCasters })
+      game.i18n.format("SWS.Ritual.SecondaryCasters", { count: ritual.secondaryCasters })
     );
   }
   return parts.join(" \u00b7 ");
@@ -246,7 +246,7 @@ export async function collectFromActor(actor, kind = BOOK_KINDS.SPELLS) {
           linked: true,
           name: formula.name,
           img: formula.img,
-          rankBadge: game.i18n.format("BWS.Formula.LevelShort", { level: formula.level }),
+          rankBadge: game.i18n.format("SWS.Formula.LevelShort", { level: formula.level }),
           price: formula.price,
           rarity: formula.rarity,
           rarityLabel: getRarityLabel(formula.rarity),
@@ -337,7 +337,7 @@ export async function collectActorSpells(actor, { kind = BOOK_KINDS.SPELLS } = {
       traditions,
       traditionTags: traditions.map((key) => ({
         key,
-        label: game.i18n.localize(`BWS.Tradition.${key.charAt(0).toUpperCase()}${key.slice(1)}`)
+        label: game.i18n.localize(`SWS.Tradition.${key.charAt(0).toUpperCase()}${key.slice(1)}`)
       })),
       rarity,
       rarityLabel: getRarityLabel(rarity),
@@ -387,7 +387,7 @@ export async function collectActorSpells(actor, { kind = BOOK_KINDS.SPELLS } = {
     loose.sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name));
     groups.push({
       id: "",
-      name: game.i18n.localize(wantRituals ? "BWS.Import.LooseRituals" : "BWS.Import.LooseSpells"),
+      name: game.i18n.localize(wantRituals ? "SWS.Import.LooseRituals" : "SWS.Import.LooseSpells"),
       kind: "",
       tradition: "",
       spells: loose
@@ -450,7 +450,7 @@ export async function importIntoSpellbook({
   // Refuse a mismatch outright rather than writing records the book cannot render. The
   // exporter only ever offers same-kind targets, so this catches API misuse.
   if (getBookKind(journal) !== kind) {
-    ui.notifications.warn(game.i18n.localize("BWS.Import.KindMismatch"));
+    ui.notifications.warn(game.i18n.localize("SWS.Import.KindMismatch"));
     return null;
   }
 

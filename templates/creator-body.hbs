@@ -1,46 +1,46 @@
 {{!-- Two columns: the compendium results on the left, the book's contents on the right. --}}
-<section class="bws-body">
+<section class="sws-body">
 
-  <div class="bws-spell-list" role="list">
+  <div class="sws-spell-list" role="list">
     {{#if hasResults}}
       {{#each groups}}
-        <div class="bws-group-header">
-          <span class="bws-group-title">{{label}}</span>
-          <span class="bws-group-count">{{countLabel}}</span>
+        <div class="sws-group-header">
+          <span class="sws-group-title">{{label}}</span>
+          <span class="sws-group-count">{{countLabel}}</span>
         </div>
 
         {{#each spells}}
-          <div class="bws-spell-row{{#if selected}} is-selected{{/if}}" role="listitem">
-            <label class="bws-row-check">
+          <div class="sws-spell-row{{#if selected}} is-selected{{/if}}" role="listitem">
+            <label class="sws-row-check">
               <input type="checkbox" data-uuid="{{uuid}}" {{#if selected}}checked{{/if}}
                      {{#if ../../readOnly}}disabled{{/if}}
                      aria-label="{{name}}" />
             </label>
 
-            <span class="bws-spell-name" title="{{name}}">{{name}}</span>
+            <span class="sws-spell-name" title="{{name}}">{{name}}</span>
 
             {{#if action.glyph}}
-              <span class="bws-action-cost{{#unless action.isNumeric}} is-text{{/unless}}"
+              <span class="sws-action-cost{{#unless action.isNumeric}} is-text{{/unless}}"
                     title="{{action.label}}">{{action.glyph}}</span>
             {{else}}
-              <span class="bws-action-cost is-empty"></span>
+              <span class="sws-action-cost is-empty"></span>
             {{/if}}
 
-            <span class="bws-traditions">
+            <span class="sws-traditions">
               {{#each traditionTags}}
-                <span class="bws-pill bws-pill-{{key}}">{{label}}</span>
+                <span class="sws-pill sws-pill-{{key}}">{{label}}</span>
               {{/each}}
-              {{#if isFocus}}<span class="bws-pill bws-pill-focus">{{localize "BWS.Rank.Focus"}}</span>{{/if}}
+              {{#if isFocus}}<span class="sws-pill sws-pill-focus">{{localize "SWS.Rank.Focus"}}</span>{{/if}}
             </span>
 
             {{!-- PF2e casts rituals outside spell slots, so a ritual row has nowhere to be
                   sent. The empty cell keeps the grid's last column in place. --}}
             {{#if isRitual}}
-              <span class="bws-send-placeholder"></span>
+              <span class="sws-send-placeholder"></span>
             {{else}}
-              <button type="button" class="bws-send" data-action="sendToSlot" data-uuid="{{uuid}}"
-                      data-tooltip="{{localize 'BWS.Creator.SendToSlot'}}"
-                      aria-label="{{localize 'BWS.Creator.SendToSlot'}}">
+              <button type="button" class="sws-send" data-action="sendToSlot" data-uuid="{{uuid}}"
+                      data-tooltip="{{localize 'SWS.Creator.SendToSlot'}}"
+                      aria-label="{{localize 'SWS.Creator.SendToSlot'}}">
                 <i class="fa-solid fa-arrow-down-to-line"></i>
               </button>
             {{/if}}
@@ -48,57 +48,57 @@
         {{/each}}
       {{/each}}
     {{else}}
-      <div class="bws-empty">
+      <div class="sws-empty">
         <i class="fa-solid fa-wand-magic-sparkles"></i>
-        <p class="bws-empty-title">{{localize "BWS.Creator.NoResults"}}</p>
-        <p class="bws-empty-hint">{{localize "BWS.Creator.NoResultsHint"}}</p>
+        <p class="sws-empty-title">{{localize "SWS.Creator.NoResults"}}</p>
+        <p class="sws-empty-hint">{{localize "SWS.Creator.NoResultsHint"}}</p>
       </div>
     {{/if}}
   </div>
 
-  <aside class="bws-selected">
-    <div class="bws-selected-header">
-      <span class="bws-selected-label">{{localize "BWS.Creator.Selected"}}</span>
-      <span class="bws-selected-count">{{selectedCountLabel}}</span>
+  <aside class="sws-selected">
+    <div class="sws-selected-header">
+      <span class="sws-selected-label">{{localize "SWS.Creator.Selected"}}</span>
+      <span class="sws-selected-count">{{selectedCountLabel}}</span>
     </div>
 
-    <div class="bws-selected-list">
+    <div class="sws-selected-list">
       {{#if selectedCount}}
         {{#each selected}}
-          <div class="bws-selected-row">
-            <span class="bws-rank-badge">{{rankBadge}}</span>
-            <span class="bws-selected-name" title="{{name}}">{{name}}</span>
+          <div class="sws-selected-row">
+            <span class="sws-rank-badge">{{rankBadge}}</span>
+            <span class="sws-selected-name" title="{{name}}">{{name}}</span>
             {{#unless ../readOnly}}
-              <button type="button" class="bws-remove" data-action="removeSelected" data-uuid="{{uuid}}"
-                      data-tooltip="{{localize 'BWS.Creator.RemoveFromSelection'}}"
-                      aria-label="{{localize 'BWS.Creator.RemoveFromSelection'}}">
+              <button type="button" class="sws-remove" data-action="removeSelected" data-uuid="{{uuid}}"
+                      data-tooltip="{{localize 'SWS.Creator.RemoveFromSelection'}}"
+                      aria-label="{{localize 'SWS.Creator.RemoveFromSelection'}}">
                 <i class="fa-solid fa-xmark"></i>
               </button>
             {{/unless}}
           </div>
         {{/each}}
       {{else}}
-        <p class="bws-selected-empty">{{emptyNote}}</p>
+        <p class="sws-selected-empty">{{emptyNote}}</p>
       {{/if}}
     </div>
 
-    <div class="bws-selected-footer">
-      <p class="bws-ownership-note">
+    <div class="sws-selected-footer">
+      <p class="sws-ownership-note">
         <i class="fa-solid fa-lock"></i>
         {{#if readOnly}}
-          {{localize "BWS.Creator.ReadOnlyNote"}}
+          {{localize "SWS.Creator.ReadOnlyNote"}}
         {{else if cannotCreate}}
-          {{localize "BWS.Error.NoJournalCreate"}}
+          {{localize "SWS.Error.NoJournalCreate"}}
         {{else}}
-          {{localize "BWS.Creator.OwnershipNote"}}
+          {{localize "SWS.Creator.OwnershipNote"}}
         {{/if}}
       </p>
-      <button type="button" class="bws-button bws-button-primary" data-action="save"
+      <button type="button" class="sws-button sws-button-primary" data-action="save"
               {{#unless canSave}}disabled{{/unless}}>
         <i class="fa-solid fa-floppy-disk"></i> {{saveLabel}}
       </button>
-      <button type="button" class="bws-button" data-action="cancel">
-        {{localize "BWS.Creator.Cancel"}}
+      <button type="button" class="sws-button" data-action="cancel">
+        {{localize "SWS.Creator.Cancel"}}
       </button>
     </div>
   </aside>

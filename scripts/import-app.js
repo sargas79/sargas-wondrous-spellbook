@@ -80,11 +80,11 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** @inheritdoc */
   static DEFAULT_OPTIONS = {
-    id: "bws-import-{id}",
-    classes: ["bws", "bws-import"],
+    id: "sws-import-{id}",
+    classes: ["sws", "sws-import"],
     tag: "div",
     window: {
-      title: "BWS.Import.Title.spells",
+      title: "SWS.Import.Title.spells",
       icon: "fa-solid fa-file-import",
       resizable: true
     },
@@ -100,12 +100,12 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** @inheritdoc */
   static PARTS = {
-    body: { template: template("import.hbs"), scrollable: [".bws-import-list"] }
+    body: { template: template("import.hbs"), scrollable: [".sws-import-list"] }
   };
 
   /** @inheritdoc */
   get title() {
-    const base = game.i18n.localize(`BWS.Import.Title.${this.kind}`);
+    const base = game.i18n.localize(`SWS.Import.Title.${this.kind}`);
     return this.actor ? `${base}: ${this.actor.name}` : base;
   }
 
@@ -133,7 +133,7 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
       isFormulas: this.kind === BOOK_KINDS.FORMULAS,
       kinds: KIND_ORDER.map((key) => ({
         key,
-        label: game.i18n.localize(`BWS.Kind.${key}`),
+        label: game.i18n.localize(`SWS.Kind.${key}`),
         active: key === this.kind
       })),
       hasActor: !!this.actor,
@@ -145,7 +145,7 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
       targets: [
         {
           id: "",
-          name: game.i18n.localize(`BWS.Import.TargetNew.${this.kind}`),
+          name: game.i18n.localize(`SWS.Import.TargetNew.${this.kind}`),
           selected: !this.targetId
         },
         ...targets.map((entry) => ({
@@ -162,13 +162,13 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
       selectedCount: this.selection.size,
       summaryLine: this.#summaryLine(),
       noteLine: this.#noteLine(),
-      emptyTitle: game.i18n.localize(`BWS.Import.Empty.${this.kind}`),
-      emptyHint: game.i18n.localize(`BWS.Import.EmptyHint.${this.kind}`),
-      noActorsLine: game.i18n.localize(`BWS.Import.NoActors.${this.kind}`),
+      emptyTitle: game.i18n.localize(`SWS.Import.Empty.${this.kind}`),
+      emptyHint: game.i18n.localize(`SWS.Import.EmptyHint.${this.kind}`),
+      noActorsLine: game.i18n.localize(`SWS.Import.NoActors.${this.kind}`),
       canImport: this.selection.size > 0 && (!!journal || (!!this.bookName.trim() && canCreateSpellbook())),
       importLabel: journal
-        ? game.i18n.localize("BWS.Import.SubmitMerge")
-        : game.i18n.localize(`BWS.Import.Submit.${this.kind}`)
+        ? game.i18n.localize("SWS.Import.SubmitMerge")
+        : game.i18n.localize(`SWS.Import.Submit.${this.kind}`)
     };
   }
 
@@ -184,13 +184,13 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
         this.data.groups.flatMap((group) => group.rows.map((row) => row.itemId))
       );
       if (!this.bookName.trim() && this.actor) {
-        this.bookName = game.i18n.format(`BWS.Import.DefaultName.${this.kind}`, {
+        this.bookName = game.i18n.format(`SWS.Import.DefaultName.${this.kind}`, {
           actor: this.actor.name
         });
       }
     } catch (err) {
-      console.error("Blizzard's Wondrous Spellbook | Failed to read the character sheet", err);
-      ui.notifications.error(game.i18n.localize("BWS.Error.ImportFailed"));
+      console.error("Sargas Wondrous Spellbook | Failed to read the character sheet", err);
+      ui.notifications.error(game.i18n.localize("SWS.Error.ImportFailed"));
       this.data = { groups: [], total: 0, unlinked: 0, rituals: 0, missing: 0 };
     } finally {
       this.loading = false;
@@ -202,7 +202,7 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
    * @returns {string}
    */
   #summaryLine() {
-    return game.i18n.format(`BWS.Import.Summary.${this.kind}`, {
+    return game.i18n.format(`SWS.Import.Summary.${this.kind}`, {
       selected: this.selection.size,
       total: this.data?.total ?? 0
     });
@@ -216,17 +216,17 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
   #noteLine() {
     const parts = [];
     if (this.data?.unlinked) {
-      parts.push(game.i18n.format("BWS.Import.UnlinkedNote", { count: this.data.unlinked }));
+      parts.push(game.i18n.format("SWS.Import.UnlinkedNote", { count: this.data.unlinked }));
     }
     if (this.data?.rituals) {
-      parts.push(game.i18n.format("BWS.Import.RitualNote", { count: this.data.rituals }));
+      parts.push(game.i18n.format("SWS.Import.RitualNote", { count: this.data.rituals }));
     }
     if (this.data?.missing) {
-      parts.push(game.i18n.format("BWS.Import.MissingNote", { count: this.data.missing }));
+      parts.push(game.i18n.format("SWS.Import.MissingNote", { count: this.data.missing }));
     }
     // Merging into a book the user owns is still open to them; only a new book is not.
     if (!this.targetId && !canCreateSpellbook()) {
-      parts.push(game.i18n.localize("BWS.Error.NoJournalCreate"));
+      parts.push(game.i18n.localize("SWS.Error.NoJournalCreate"));
     }
     return parts.join(" ");
   }
@@ -256,7 +256,7 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
       this.#refreshSummary();
     });
 
-    const list = root.querySelector(".bws-import-list");
+    const list = root.querySelector(".sws-import-list");
     list?.addEventListener("change", (event) => {
       const box = event.target.closest("input[type='checkbox']");
       if (!box) return;
@@ -324,7 +324,7 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
   #refreshSummary() {
     const root = this.element;
 
-    const summary = root.querySelector(".bws-import-summary");
+    const summary = root.querySelector(".sws-import-summary");
     if (summary) summary.textContent = this.#summaryLine();
 
     for (const group of this.data?.groups ?? []) {
@@ -337,7 +337,7 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
       }
       const count = root.querySelector(`[data-group-count='${group.id}']`);
       if (count) {
-        count.textContent = game.i18n.format("BWS.Import.GroupCount", {
+        count.textContent = game.i18n.format("SWS.Import.GroupCount", {
           selected,
           total: group.rows.length
         });
@@ -387,14 +387,14 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
   /** Write the ticked rows into a new or existing book. */
   static async #onImport() {
     if (!this.selection.size) {
-      ui.notifications.warn(game.i18n.localize("BWS.Import.NothingSelected"));
+      ui.notifications.warn(game.i18n.localize("SWS.Import.NothingSelected"));
       return;
     }
 
     const journal = this.targetId ? game.journal.get(this.targetId) : null;
     const name = this.bookName.trim();
     if (!journal && !name) {
-      ui.notifications.warn(game.i18n.localize("BWS.Notify.NoName"));
+      ui.notifications.warn(game.i18n.localize("SWS.Notify.NoName"));
       return;
     }
 
@@ -408,19 +408,19 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     if (!result.added) {
       ui.notifications.info(
-        game.i18n.format("BWS.Import.NothingNew", { name: result.journal.name })
+        game.i18n.format("SWS.Import.NothingNew", { name: result.journal.name })
       );
       return;
     }
 
     ui.notifications.info(
       journal
-        ? game.i18n.format("BWS.Import.Merged", {
+        ? game.i18n.format("SWS.Import.Merged", {
             count: result.added,
             name: result.journal.name,
             skipped: result.skipped
           })
-        : game.i18n.format("BWS.Import.Created", {
+        : game.i18n.format("SWS.Import.Created", {
             count: result.added,
             name: result.journal.name
           })
@@ -446,11 +446,11 @@ export class ImportApp extends HandlebarsApplicationMixin(ApplicationV2) {
 export function openImport({ actor, kind = BOOK_KINDS.SPELLS } = {}) {
   const target = actor ?? resolveTargetActor()?.actor ?? null;
   if (target && !target.isOwner) {
-    ui.notifications.warn(game.i18n.format("BWS.Slot.NotOwner", { actor: target.name }));
+    ui.notifications.warn(game.i18n.format("SWS.Slot.NotOwner", { actor: target.name }));
     return null;
   }
   if (!target && !listImportableActors({ kind }).length) {
-    ui.notifications.warn(game.i18n.localize(`BWS.Import.NoActors.${kind}`));
+    ui.notifications.warn(game.i18n.localize(`SWS.Import.NoActors.${kind}`));
     return null;
   }
 
@@ -478,10 +478,10 @@ function pickImportKind(actor) {
 
 /** Shared description of the sheet's import control. */
 const IMPORT_CONTROL = Object.freeze({
-  cssClass: "bws-import-spells",
+  cssClass: "sws-import-spells",
   icon: "fa-solid fa-book-medical",
-  label: "BWS.Import.SheetButtonLabel",
-  tooltip: "BWS.Import.SheetButton"
+  label: "SWS.Import.SheetButtonLabel",
+  tooltip: "SWS.Import.SheetButton"
 });
 
 /**

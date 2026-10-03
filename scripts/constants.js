@@ -12,7 +12,7 @@ export const MODULE_ID = "sargas-wondrous-spellbook";
 export const MODULE_PATH = `modules/${MODULE_ID}`;
 
 /** Default name of the Journal Entry folder that stores every spellbook. */
-export const DEFAULT_FOLDER_NAME = "Blizzard's Spellbooks";
+export const DEFAULT_FOLDER_NAME = "Sargas Spellbooks";
 
 /** Default name of the Item folder that stores generated loot spellbooks. */
 export const DEFAULT_LOOT_FOLDER_NAME = "Spellbook Loot";

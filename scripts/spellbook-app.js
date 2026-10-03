@@ -56,7 +56,7 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
      * @type {boolean}
      */
     this.unsupportedBook = journalKind === BOOK_KINDS.FORMULAS;
-    if (this.unsupportedBook) ui.notifications.warn(game.i18n.localize("BWS.Creator.NotEditable"));
+    if (this.unsupportedBook) ui.notifications.warn(game.i18n.localize("SWS.Creator.NotEditable"));
 
     /**
      * Which pool this book draws from: spells, or rituals. An existing book's kind wins
@@ -116,7 +116,7 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
    * @returns {string}
    */
   static idFor(journal) {
-    return `bws-spellbook-creator-${domSafe(journal.id)}`;
+    return `sws-spellbook-creator-${domSafe(journal.id)}`;
   }
 
   /**
@@ -135,11 +135,11 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** @inheritdoc */
   static DEFAULT_OPTIONS = {
-    id: "bws-spellbook-creator-{id}",
-    classes: ["bws", "bws-creator"],
+    id: "sws-spellbook-creator-{id}",
+    classes: ["sws", "sws-creator"],
     tag: "div",
     window: {
-      title: "BWS.Creator.Title.spells",
+      title: "SWS.Creator.Title.spells",
       icon: "fa-solid fa-book-open",
       resizable: true
     },
@@ -158,13 +158,13 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
   /** @inheritdoc */
   static PARTS = {
     header: { template: template("creator-header.hbs") },
-    body: { template: template("creator-body.hbs"), scrollable: [".bws-spell-list", ".bws-selected-list"] },
+    body: { template: template("creator-body.hbs"), scrollable: [".sws-spell-list", ".sws-selected-list"] },
     footer: { template: template("creator-footer.hbs") }
   };
 
   /** @inheritdoc */
   get title() {
-    const base = game.i18n.localize(`BWS.Creator.Title.${this.kind}`);
+    const base = game.i18n.localize(`SWS.Creator.Title.${this.kind}`);
     return this.journal ? `${base}: ${this.journal.name}` : base;
   }
 
@@ -200,21 +200,21 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
       kindLocked: this.kindLocked,
       kinds: [BOOK_KINDS.SPELLS, BOOK_KINDS.RITUALS].map((key) => ({
         key,
-        label: game.i18n.localize(`BWS.Kind.${key}`),
+        label: game.i18n.localize(`SWS.Kind.${key}`),
         active: key === this.kind
       })),
-      nameLabel: game.i18n.localize(`BWS.Creator.NameLabel.${this.kind}`),
-      saveLabel: game.i18n.localize(`BWS.Creator.Save.${this.kind}`),
+      nameLabel: game.i18n.localize(`SWS.Creator.NameLabel.${this.kind}`),
+      saveLabel: game.i18n.localize(`SWS.Creator.Save.${this.kind}`),
       emptyNote: game.i18n.localize(
-        isRituals ? "BWS.Ritual.SelectedEmpty" : "BWS.Creator.SelectedEmpty"
+        isRituals ? "SWS.Ritual.SelectedEmpty" : "SWS.Creator.SelectedEmpty"
       ),
       spellbookName: this.spellbookName,
       tradition: this.tradition,
       traditions: [
-        { key: "all", label: game.i18n.localize("BWS.Tradition.All"), active: this.tradition === "all" },
+        { key: "all", label: game.i18n.localize("SWS.Tradition.All"), active: this.tradition === "all" },
         ...TRADITIONS.map((key) => ({
           key,
-          label: game.i18n.localize(`BWS.Tradition.${key.charAt(0).toUpperCase()}${key.slice(1)}`),
+          label: game.i18n.localize(`SWS.Tradition.${key.charAt(0).toUpperCase()}${key.slice(1)}`),
           active: this.tradition === key
         }))
       ],
@@ -224,9 +224,9 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
           // `aria` is kept separate from `title`: an accessible name should name the
           // control, so it starts with the visible label and leaves the shift-click
           // gesture to the tooltip rather than reading it out on every focus.
-          label: game.i18n.localize("BWS.Creator.RankAll"),
-          title: game.i18n.localize("BWS.Creator.RankAllHint"),
-          aria: game.i18n.localize("BWS.Creator.RankAllAria"),
+          label: game.i18n.localize("SWS.Creator.RankAll"),
+          title: game.i18n.localize("SWS.Creator.RankAllHint"),
+          aria: game.i18n.localize("SWS.Creator.RankAllAria"),
           active: this.ranks.size === 0
         },
         // Badges are short by design, so the chips stay compact; the full rank name
@@ -247,12 +247,12 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
       selectedCount: selected.length,
       selectedCountLabel:
         selected.length === 1
-          ? game.i18n.localize("BWS.Creator.SelectedCountOne")
-          : game.i18n.format("BWS.Creator.SelectedCount", { count: selected.length }),
+          ? game.i18n.localize("SWS.Creator.SelectedCountOne")
+          : game.i18n.format("SWS.Creator.SelectedCount", { count: selected.length }),
       readOnly: this.readOnly,
       cannotCreate: this.cannotCreate,
       canSave: !this.readOnly && !this.cannotCreate && selected.length > 0 && !!this.spellbookName.trim(),
-      statusLine: game.i18n.format("BWS.Creator.StatusLine", {
+      statusLine: game.i18n.format("SWS.Creator.StatusLine", {
         packs: query.packCount,
         indexed: query.indexed,
         shown: query.shown
@@ -269,8 +269,8 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // independently, so a node that survived the last render must not be bound twice.
     const bind = (selector, event, handler) => {
       const node = root.querySelector(selector);
-      if (!node || node.dataset.bwsBound === event) return;
-      node.dataset.bwsBound = event;
+      if (!node || node.dataset.swsBound === event) return;
+      node.dataset.swsBound = event;
       node.addEventListener(event, handler);
     };
 
@@ -293,9 +293,9 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Row checkboxes live inside `body`, which is replaced wholesale on each render,
     // so a single delegated listener on the freshly rendered list is enough.
-    const list = root.querySelector(".bws-spell-list");
-    if (list && list.dataset.bwsBound !== "change") {
-      list.dataset.bwsBound = "change";
+    const list = root.querySelector(".sws-spell-list");
+    if (list && list.dataset.swsBound !== "change") {
+      list.dataset.swsBound = "change";
       list.addEventListener("change", (event) => {
         const checkbox = event.target.closest("input[type='checkbox'][data-uuid]");
         if (checkbox) this.#toggleSpell(checkbox.dataset.uuid, checkbox.checked);
@@ -354,7 +354,7 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (this.kindLocked || kind === this.kind) return;
 
     if (this.selected.size) {
-      ui.notifications.info(game.i18n.localize("BWS.Creator.KindSwitchCleared"));
+      ui.notifications.info(game.i18n.localize("SWS.Creator.KindSwitchCleared"));
       this.selected.clear();
     }
     this.kind = kind;
@@ -412,17 +412,17 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
   /** Persist the spellbook and close. */
   static async #onSave() {
     if (this.readOnly) {
-      ui.notifications.warn(game.i18n.localize("BWS.Notify.NoPermission"));
+      ui.notifications.warn(game.i18n.localize("SWS.Notify.NoPermission"));
       return;
     }
 
     const name = this.spellbookName.trim();
     if (!name) {
-      ui.notifications.warn(game.i18n.localize("BWS.Notify.NoName"));
+      ui.notifications.warn(game.i18n.localize("SWS.Notify.NoName"));
       return;
     }
     if (!this.selected.size) {
-      ui.notifications.warn(game.i18n.localize("BWS.Notify.NoSpells"));
+      ui.notifications.warn(game.i18n.localize("SWS.Notify.NoSpells"));
       return;
     }
 
@@ -434,7 +434,7 @@ export class SpellbookApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!result) return;
 
     ui.notifications.info(
-      game.i18n.format(this.journal ? "BWS.Notify.Updated" : "BWS.Notify.Saved", { name })
+      game.i18n.format(this.journal ? "SWS.Notify.Updated" : "SWS.Notify.Saved", { name })
     );
     Hooks.callAll(`${MODULE_ID}.spellbookSaved`, result);
     await this.close();

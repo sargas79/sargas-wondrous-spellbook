@@ -1,12 +1,12 @@
 {{!-- Filter bar: kind, name, tradition segments, search and the focus toggle. --}}
 {{!-- Deliberately excluded from search re-renders so the input keeps focus. --}}
-<section class="bws-header{{#if isRituals}} is-rituals{{/if}}">
+<section class="sws-header{{#if isRituals}} is-rituals{{/if}}">
   {{#unless kindLocked}}
-    <div class="bws-field bws-field-kind">
-      <span class="bws-field-label">{{localize "BWS.Creator.KindLabel"}}</span>
-      <div class="bws-segments" role="group" aria-label="{{localize 'BWS.Creator.KindLabel'}}">
+    <div class="sws-field sws-field-kind">
+      <span class="sws-field-label">{{localize "SWS.Creator.KindLabel"}}</span>
+      <div class="sws-segments" role="group" aria-label="{{localize 'SWS.Creator.KindLabel'}}">
         {{#each kinds}}
-          <button type="button" class="bws-segment{{#if active}} is-active{{/if}}"
+          <button type="button" class="sws-segment{{#if active}} is-active{{/if}}"
                   data-action="setKind" data-kind="{{key}}"
                   aria-pressed="{{#if active}}true{{else}}false{{/if}}">{{label}}</button>
         {{/each}}
@@ -14,40 +14,40 @@
     </div>
   {{/unless}}
 
-  <div class="bws-field bws-field-name">
-    <label for="{{partId}}-bws-name">{{nameLabel}}</label>
-    <input id="{{partId}}-bws-name" type="text" name="spellbookName" value="{{spellbookName}}"
-           placeholder="{{localize 'BWS.Creator.NamePlaceholder'}}" autocomplete="off"
+  <div class="sws-field sws-field-name">
+    <label for="{{partId}}-sws-name">{{nameLabel}}</label>
+    <input id="{{partId}}-sws-name" type="text" name="spellbookName" value="{{spellbookName}}"
+           placeholder="{{localize 'SWS.Creator.NamePlaceholder'}}" autocomplete="off"
            {{#if readOnly}}disabled{{/if}} />
   </div>
 
-  <div class="bws-field bws-field-tradition">
-    <span class="bws-field-label">{{localize "BWS.Creator.TraditionLabel"}}</span>
-    <div class="bws-segments" role="group" aria-label="{{localize 'BWS.Creator.TraditionLabel'}}">
+  <div class="sws-field sws-field-tradition">
+    <span class="sws-field-label">{{localize "SWS.Creator.TraditionLabel"}}</span>
+    <div class="sws-segments" role="group" aria-label="{{localize 'SWS.Creator.TraditionLabel'}}">
       {{#each traditions}}
-        <button type="button" class="bws-segment{{#if active}} is-active{{/if}}"
+        <button type="button" class="sws-segment{{#if active}} is-active{{/if}}"
                 data-action="setTradition" data-tradition="{{key}}"
                 aria-pressed="{{#if active}}true{{else}}false{{/if}}">{{label}}</button>
       {{/each}}
     </div>
   </div>
 
-  <div class="bws-field bws-field-search">
-    <label for="{{partId}}-bws-search">{{localize "BWS.Creator.SearchLabel"}}</label>
-    <div class="bws-search-wrap">
+  <div class="sws-field sws-field-search">
+    <label for="{{partId}}-sws-search">{{localize "SWS.Creator.SearchLabel"}}</label>
+    <div class="sws-search-wrap">
       <i class="fa-solid fa-magnifying-glass"></i>
-      <input id="{{partId}}-bws-search" type="search" name="search" value="{{search}}"
-             placeholder="{{localize 'BWS.Creator.SearchPlaceholder'}}" autocomplete="off" />
+      <input id="{{partId}}-sws-search" type="search" name="search" value="{{search}}"
+             placeholder="{{localize 'SWS.Creator.SearchPlaceholder'}}" autocomplete="off" />
     </div>
   </div>
 
   {{!-- Ranks are independent toggles, not a radio group, so each chip owns its own
         aria-pressed rather than the group tracking one selection. --}}
-  <div class="bws-field bws-field-rank">
-    <span class="bws-field-label">{{localize "BWS.Creator.RankLabel"}}</span>
-    <div class="bws-chips" role="group" aria-label="{{localize 'BWS.Creator.RankLabel'}}">
+  <div class="sws-field sws-field-rank">
+    <span class="sws-field-label">{{localize "SWS.Creator.RankLabel"}}</span>
+    <div class="sws-chips" role="group" aria-label="{{localize 'SWS.Creator.RankLabel'}}">
       {{#each rankOptions}}
-        <button type="button" class="bws-chip{{#if active}} is-active{{/if}}"
+        <button type="button" class="sws-chip{{#if active}} is-active{{/if}}"
                 data-action="setRank" data-rank="{{key}}"
                 data-tooltip="{{title}}" aria-label="{{aria}}"
                 aria-pressed="{{#if active}}true{{else}}false{{/if}}">{{label}}</button>
@@ -57,9 +57,9 @@
 
   {{!-- No ritual is a focus spell, so the toggle would have nothing to say. --}}
   {{#unless isRituals}}
-    <label class="bws-checkbox bws-field-focus">
+    <label class="sws-checkbox sws-field-focus">
       <input type="checkbox" name="includeFocus" {{#if includeFocus}}checked{{/if}} />
-      <span>{{localize "BWS.Creator.IncludeFocus"}}</span>
+      <span>{{localize "SWS.Creator.IncludeFocus"}}</span>
     </label>
   {{/unless}}
 </section>

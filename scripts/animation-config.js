@@ -88,7 +88,7 @@ function getItemRecipe(item) {
   try {
     return getSVA()?.automation?.getItemRecipe?.(item) ?? null;
   } catch (err) {
-    console.warn("Blizzard's Wondrous Spellbook | Could not read the SVA recipe", err);
+    console.warn("Sargas Wondrous Spellbook | Could not read the SVA recipe", err);
     return null;
   }
 }
@@ -177,11 +177,11 @@ export async function migrateLegacyAnimations() {
       try {
         if (await syncAnimationRecipe(item)) written++;
       } catch (err) {
-        console.warn(`Blizzard's Wondrous Spellbook | Could not migrate "${item.name}"`, err);
+        console.warn(`Sargas Wondrous Spellbook | Could not migrate "${item.name}"`, err);
       }
     }
   }
-  if (written) console.log(`Blizzard's Wondrous Spellbook | Wrote ${written} SVA recipe(s) for stored animations`);
+  if (written) console.log(`Sargas Wondrous Spellbook | Wrote ${written} SVA recipe(s) for stored animations`);
   return written;
 }
 
@@ -206,7 +206,7 @@ function getSuggestedPaths(query) {
       .map((entry) => entry?.path)
       .filter((path) => typeof path === "string" && path);
   } catch (err) {
-    console.warn("Blizzard's Wondrous Spellbook | Could not search the JB2A catalog", err);
+    console.warn("Sargas Wondrous Spellbook | Could not search the JB2A catalog", err);
     return [];
   }
 }
@@ -222,71 +222,71 @@ function getSuggestedPaths(query) {
  */
 export async function openAnimationConfigDialog(item) {
   if (!getAnimationsAvailable()) {
-    ui.notifications.warn(game.i18n.localize("BWS.Anim.Unavailable"));
+    ui.notifications.warn(game.i18n.localize("SWS.Anim.Unavailable"));
     return;
   }
   if (!item) return;
 
   const current = getAnimationPath(item);
-  const listId = `bws-anim-paths-${foundry.utils.randomID()}`;
+  const listId = `sws-anim-paths-${foundry.utils.randomID()}`;
 
   const content = `
-    <div class="bws-anim-dialog">
-      <div class="bws-anim-spell">
+    <div class="sws-anim-dialog">
+      <div class="sws-anim-spell">
         <img src="${foundry.utils.escapeHTML(item.img ?? "")}" alt="" />
-        <div class="bws-anim-spell-text">
-          <span class="bws-anim-spell-name">${foundry.utils.escapeHTML(item.name)}</span>
-          <span class="bws-anim-spell-sub">${
+        <div class="sws-anim-spell-text">
+          <span class="sws-anim-spell-name">${foundry.utils.escapeHTML(item.name)}</span>
+          <span class="sws-anim-spell-sub">${
             current
-              ? game.i18n.format("BWS.Anim.Current", { path: foundry.utils.escapeHTML(current) })
-              : game.i18n.localize("BWS.Anim.None")
+              ? game.i18n.format("SWS.Anim.Current", { path: foundry.utils.escapeHTML(current) })
+              : game.i18n.localize("SWS.Anim.None")
           }</span>
         </div>
       </div>
-      <label class="bws-anim-label" for="bws-anim-path">${game.i18n.localize("BWS.Anim.PathLabel")}</label>
-      <input id="bws-anim-path" type="text" name="path" list="${listId}"
+      <label class="sws-anim-label" for="sws-anim-path">${game.i18n.localize("SWS.Anim.PathLabel")}</label>
+      <input id="sws-anim-path" type="text" name="path" list="${listId}"
              value="${foundry.utils.escapeHTML(current)}"
-             placeholder="${game.i18n.localize("BWS.Anim.PathPlaceholder")}" autocomplete="off" />
+             placeholder="${game.i18n.localize("SWS.Anim.PathPlaceholder")}" autocomplete="off" />
       <datalist id="${listId}"></datalist>
-      <p class="bws-anim-hint">${game.i18n.localize("BWS.Anim.Hint")}</p>
+      <p class="sws-anim-hint">${game.i18n.localize("SWS.Anim.Hint")}</p>
       ${
         isAutomationEnabled()
           ? ""
-          : `<p class="bws-anim-hint bws-anim-warning"><i class="fa-solid fa-triangle-exclamation"></i> ${game.i18n.localize("BWS.Anim.AutomationOff")}</p>`
+          : `<p class="sws-anim-hint sws-anim-warning"><i class="fa-solid fa-triangle-exclamation"></i> ${game.i18n.localize("SWS.Anim.AutomationOff")}</p>`
       }
-      <button type="button" class="bws-anim-browse">
-        <i class="fa-solid fa-film"></i> ${game.i18n.localize("BWS.Anim.Browse")}
+      <button type="button" class="sws-anim-browse">
+        <i class="fa-solid fa-film"></i> ${game.i18n.localize("SWS.Anim.Browse")}
       </button>
     </div>
   `;
 
   try {
     await foundry.applications.api.DialogV2.wait({
-      window: { title: game.i18n.localize("BWS.Anim.Title"), icon: "fa-solid fa-wand-sparkles" },
-      classes: ["bws-dialog"],
+      window: { title: game.i18n.localize("SWS.Anim.Title"), icon: "fa-solid fa-wand-sparkles" },
+      classes: ["sws-dialog"],
       content,
       buttons: [
         {
           action: "save",
-          label: game.i18n.localize("BWS.Anim.Save"),
+          label: game.i18n.localize("SWS.Anim.Save"),
           icon: "fa-solid fa-floppy-disk",
           default: true,
           callback: async (_event, _button, dialog) => {
-            const path = dialog.element.querySelector("#bws-anim-path")?.value?.trim() ?? "";
+            const path = dialog.element.querySelector("#sws-anim-path")?.value?.trim() ?? "";
             await setAnimationPath(item, path);
           }
         },
         {
           action: "clear",
-          label: game.i18n.localize("BWS.Anim.Clear"),
+          label: game.i18n.localize("SWS.Anim.Clear"),
           icon: "fa-solid fa-eraser",
           callback: async () => setAnimationPath(item, "")
         },
-        { action: "cancel", label: game.i18n.localize("BWS.Anim.Cancel"), icon: "fa-solid fa-xmark" }
+        { action: "cancel", label: game.i18n.localize("SWS.Anim.Cancel"), icon: "fa-solid fa-xmark" }
       ],
       rejectClose: false,
       render: (_event, dialog) => {
-        const input = dialog.element.querySelector("#bws-anim-path");
+        const input = dialog.element.querySelector("#sws-anim-path");
         const datalist = dialog.element.querySelector(`#${listId}`);
 
         // The catalog holds thousands of leaves, so the datalist is filled per query
@@ -306,7 +306,7 @@ export async function openAnimationConfigDialog(item) {
 
         // SVA's animation browser in picker mode: choosing a card closes the browser
         // and hands the path back, which lands in the field ready to be saved.
-        dialog.element.querySelector(".bws-anim-browse")?.addEventListener("click", () => {
+        dialog.element.querySelector(".sws-anim-browse")?.addEventListener("click", () => {
           try {
             getSVA()?.ui?.openBrowser?.({
               path: input?.value?.trim() || undefined,
@@ -318,14 +318,14 @@ export async function openAnimationConfigDialog(item) {
               }
             });
           } catch (err) {
-            console.warn("Blizzard's Wondrous Spellbook | Could not open the animation browser", err);
+            console.warn("Sargas Wondrous Spellbook | Could not open the animation browser", err);
           }
         });
       }
     });
   } catch (err) {
-    console.error("Blizzard's Wondrous Spellbook | Animation dialog failed", err);
-    ui.notifications.error(game.i18n.localize("BWS.Error.AnimSaveFailed"));
+    console.error("Sargas Wondrous Spellbook | Animation dialog failed", err);
+    ui.notifications.error(game.i18n.localize("SWS.Error.AnimSaveFailed"));
   }
 }
 
@@ -350,14 +350,14 @@ export async function setAnimationPath(item, path) {
         await automation?.setItemRecipe?.(item, buildAnimationRecipe(path));
       }
       await item.setFlag(MODULE_ID, ANIMATION_FLAG, path);
-      ui.notifications.info(game.i18n.format("BWS.Anim.Saved", { spell: item.name }));
+      ui.notifications.info(game.i18n.format("SWS.Anim.Saved", { spell: item.name }));
     } else {
       if (hasRecipeFlag(item)) await automation?.setItemRecipe?.(item, null);
       await item.unsetFlag(MODULE_ID, ANIMATION_FLAG);
-      ui.notifications.info(game.i18n.format("BWS.Anim.Cleared", { spell: item.name }));
+      ui.notifications.info(game.i18n.format("SWS.Anim.Cleared", { spell: item.name }));
     }
   } catch (err) {
-    console.error("Blizzard's Wondrous Spellbook | Failed to write the animation flag", err);
-    ui.notifications.error(game.i18n.localize("BWS.Error.AnimSaveFailed"));
+    console.error("Sargas Wondrous Spellbook | Failed to write the animation flag", err);
+    ui.notifications.error(game.i18n.localize("SWS.Error.AnimSaveFailed"));
   }
 }

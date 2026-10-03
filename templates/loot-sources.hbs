@@ -1,25 +1,25 @@
 {{!-- Which books the loot generator may draw from. Built from the world's own
       compendiums, so the list names whatever this table has installed. --}}
-<div class="bws-sources-inner">
+<div class="sws-sources-inner">
 
-  <div class="bws-sources-head">
-    <span class="bws-field-hint">{{localize "BWS.Loot.SourcesHint" count=total}}</span>
-    <span class="bws-sources-bulk">
-      <button type="button" class="bws-button bws-button-small" data-bulk="all">
-        {{localize "BWS.Loot.SourcesAllButton"}}
+  <div class="sws-sources-head">
+    <span class="sws-field-hint">{{localize "SWS.Loot.SourcesHint" count=total}}</span>
+    <span class="sws-sources-bulk">
+      <button type="button" class="sws-button sws-button-small" data-bulk="all">
+        {{localize "SWS.Loot.SourcesAllButton"}}
       </button>
-      <button type="button" class="bws-button bws-button-small" data-bulk="none">
-        {{localize "BWS.Loot.SourcesNoneButton"}}
+      <button type="button" class="sws-button sws-button-small" data-bulk="none">
+        {{localize "SWS.Loot.SourcesNoneButton"}}
       </button>
     </span>
   </div>
 
-  <div class="bws-sources-list">
+  <div class="sws-sources-list">
     {{#each sources}}
-      <label class="bws-checkbox bws-source-row">
+      <label class="sws-checkbox sws-source-row">
         <input type="checkbox" name="source" value="{{key}}" {{checked checked}} />
-        <span class="bws-source-name" title="{{label}}">{{label}}</span>
-        <span class="bws-source-count">{{count}}</span>
+        <span class="sws-source-name" title="{{label}}">{{label}}</span>
+        <span class="sws-source-count">{{count}}</span>
       </label>
     {{/each}}
   </div>

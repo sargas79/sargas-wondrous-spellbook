@@ -142,10 +142,10 @@ function localizeList(key, fallback) {
  * @returns {string}
  */
 export function rollBookName(rng) {
-  const adjective = pick(rng, localizeList("BWS.Loot.Names.Adjectives", FALLBACK_NAMES.adjectives));
-  const noun = pick(rng, localizeList("BWS.Loot.Names.Nouns", FALLBACK_NAMES.nouns));
-  const author = pick(rng, localizeList("BWS.Loot.Names.Authors", FALLBACK_NAMES.authors));
-  return game.i18n.format("BWS.Loot.Names.Pattern", { adjective, noun, author });
+  const adjective = pick(rng, localizeList("SWS.Loot.Names.Adjectives", FALLBACK_NAMES.adjectives));
+  const noun = pick(rng, localizeList("SWS.Loot.Names.Nouns", FALLBACK_NAMES.nouns));
+  const author = pick(rng, localizeList("SWS.Loot.Names.Authors", FALLBACK_NAMES.authors));
+  return game.i18n.format("SWS.Loot.Names.Pattern", { adjective, noun, author });
 }
 
 /* -------------------------------------------------- *
@@ -451,7 +451,7 @@ async function getOrCreateLootFolder() {
     if (!game.user.isGM) return null;
     return await Folder.create({ name, type: "Item", color: "#6d5ce7", sorting: "a" });
   } catch (err) {
-    console.error("Blizzard's Wondrous Spellbook | Failed to resolve the loot folder", err);
+    console.error("Sargas Wondrous Spellbook | Failed to resolve the loot folder", err);
     return null;
   }
 }
@@ -473,9 +473,9 @@ async function getOrCreateLootFolder() {
 export function buildLootItemSource({ name, spells, meta, folderId = null }) {
   const stored = spells.map(toStoredSpell);
   const description = [
-    `<p><em>${game.i18n.format("BWS.Loot.ItemBlurb", {
+    `<p><em>${game.i18n.format("SWS.Loot.ItemBlurb", {
       count: stored.length,
-      tradition: game.i18n.localize(`BWS.Loot.Tradition.${meta.tradition}`)
+      tradition: game.i18n.localize(`SWS.Loot.Tradition.${meta.tradition}`)
     })}</em></p>`,
     renderSpellsPage(stored)
   ].join("\n");
@@ -519,7 +519,7 @@ export async function createLootSpellbook({ name, spells, meta, actors = [] }) {
       const created = [];
       for (const actor of actors) {
         if (!actor.isOwner) {
-          ui.notifications.warn(game.i18n.format("BWS.Slot.NotOwner", { actor: actor.name }));
+          ui.notifications.warn(game.i18n.format("SWS.Slot.NotOwner", { actor: actor.name }));
           continue;
         }
         const item = await Item.create(foundry.utils.deepClone(source), { parent: actor });
@@ -529,7 +529,7 @@ export async function createLootSpellbook({ name, spells, meta, actors = [] }) {
     }
 
     if (!game.user.isGM) {
-      ui.notifications.warn(game.i18n.localize("BWS.Loot.GMOnly"));
+      ui.notifications.warn(game.i18n.localize("SWS.Loot.GMOnly"));
       return [];
     }
 
@@ -539,8 +539,8 @@ export async function createLootSpellbook({ name, spells, meta, actors = [] }) {
     const item = await Item.create(source);
     return item ? [item] : [];
   } catch (err) {
-    console.error("Blizzard's Wondrous Spellbook | Failed to create the loot spellbook", err);
-    ui.notifications.error(game.i18n.localize("BWS.Loot.CreateFailed"));
+    console.error("Sargas Wondrous Spellbook | Failed to create the loot spellbook", err);
+    ui.notifications.error(game.i18n.localize("SWS.Loot.CreateFailed"));
     return [];
   }
 }
@@ -606,10 +606,10 @@ export function summariseLootBook(item) {
     count: spells.length,
     countLabel:
       spells.length === 1
-        ? game.i18n.localize("BWS.Browser.SpellSummaryOne")
-        : game.i18n.format("BWS.Browser.SpellSummary", { count: spells.length }),
+        ? game.i18n.localize("SWS.Browser.SpellSummaryOne")
+        : game.i18n.format("SWS.Browser.SpellSummary", { count: spells.length }),
     ranks: ranks.map((r) => ({ rank: r, badge: getRankBadge(r) })),
     canEdit: game.user.isGM,
-    lootLabel: game.i18n.format("BWS.Browser.LootTag", { level: meta.level ?? item.system?.level?.value ?? 0 })
+    lootLabel: game.i18n.format("SWS.Browser.LootTag", { level: meta.level ?? item.system?.level?.value ?? 0 })
   };
 }

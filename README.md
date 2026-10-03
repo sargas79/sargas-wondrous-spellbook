@@ -1,4 +1,4 @@
-# Blizzard's Wondrous Spellbook
+# Sargas Wondrous Spellbook
 
 A spellbook creator and slot-fill tool for the **Pathfinder Second Edition** system on **Foundry VTT v14**.
 
@@ -269,7 +269,7 @@ cannot create folders, so a book a player saves before the folder exists lands a
 |---|---|---|---|
 | Character Sheet Integration | World | On | Inject the animation gear button into PF2e spell rows |
 | Show Toolbar Button | Client | On | Add the spellbook button to the scene controls toolbar |
-| Spellbook Folder Name | World | `Blizzard's Spellbooks` | Journal folder that stores every spellbook |
+| Spellbook Folder Name | World | `Sargas Spellbooks` | Journal folder that stores every spellbook |
 | Loot Spellbook Folder Name | World | `Spellbook Loot` | Item folder that stores generated loot spellbooks |
 | Default Loot Book Size | World | Grimoire | Book shape the loot generator starts on |
 | Loot Rarity Ceiling | World | Common | Rarest spell a generated book may contain |
@@ -328,7 +328,7 @@ await api.createLootSpellbook({ ...roll, actors: [game.actors.getName("Treasure 
 ```
 module.json                      Manifest (Foundry v14, PF2e system relationship)
 lang/en.json                     All UI strings
-styles/spellbook.css             Nocturne-flavoured dark theme, scoped to .bws
+styles/spellbook.css             Nocturne-flavoured dark theme, scoped to .sws
 scripts/
   constants.js                   Shared ids, settings keys, template path helper
   app-utils.js                   Window ids, focus-or-open, V2 header controls

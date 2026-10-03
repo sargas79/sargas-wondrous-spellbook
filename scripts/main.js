@@ -1,5 +1,5 @@
 /**
- * Blizzard's Wondrous Spellbook - module entry point.
+ * Sargas Wondrous Spellbook - module entry point.
  *
  * Registers settings and hooks at `init`, then wires up the scene control button, the PF2e
  * character sheet integration at `ready`.
@@ -8,7 +8,7 @@
 import { MODULE_ID, SETTINGS, DEFAULT_FOLDER_NAME, DEFAULT_LOOT_FOLDER_NAME } from "./constants.js";
 
 /** Name of the scene control tool that opens the spellbook browser. */
-const TOOL_NAME = "bws-spellbook";
+const TOOL_NAME = "sws-spellbook";
 import { SpellbookApp } from "./spellbook-app.js";
 import { MySpellbooksApp, registerBrowserRefreshHooks } from "./my-spellbooks-app.js";
 import { injectSheetControls, openSendToSlotDialog, resolveTargetActor } from "./slot-manager.js";
@@ -34,8 +34,8 @@ import * as persistence from "./persistence.js";
  */
 function registerSettings() {
   game.settings.register(MODULE_ID, SETTINGS.SHEET_INTEGRATION, {
-    name: "BWS.Settings.SheetIntegration.Name",
-    hint: "BWS.Settings.SheetIntegration.Hint",
+    name: "SWS.Settings.SheetIntegration.Name",
+    hint: "SWS.Settings.SheetIntegration.Hint",
     scope: "world",
     config: true,
     type: Boolean,
@@ -43,8 +43,8 @@ function registerSettings() {
   });
 
   game.settings.register(MODULE_ID, SETTINGS.SIDEBAR_BUTTON, {
-    name: "BWS.Settings.SidebarButton.Name",
-    hint: "BWS.Settings.SidebarButton.Hint",
+    name: "SWS.Settings.SidebarButton.Name",
+    hint: "SWS.Settings.SidebarButton.Hint",
     scope: "client",
     config: true,
     type: Boolean,
@@ -53,8 +53,8 @@ function registerSettings() {
   });
 
   game.settings.register(MODULE_ID, SETTINGS.FOLDER_NAME, {
-    name: "BWS.Settings.FolderName.Name",
-    hint: "BWS.Settings.FolderName.Hint",
+    name: "SWS.Settings.FolderName.Name",
+    hint: "SWS.Settings.FolderName.Hint",
     scope: "world",
     config: true,
     type: String,
@@ -62,8 +62,8 @@ function registerSettings() {
   });
 
   game.settings.register(MODULE_ID, SETTINGS.LOOT_FOLDER_NAME, {
-    name: "BWS.Settings.LootFolderName.Name",
-    hint: "BWS.Settings.LootFolderName.Hint",
+    name: "SWS.Settings.LootFolderName.Name",
+    hint: "SWS.Settings.LootFolderName.Hint",
     scope: "world",
     config: true,
     type: String,
@@ -71,29 +71,29 @@ function registerSettings() {
   });
 
   game.settings.register(MODULE_ID, SETTINGS.LOOT_PROFILE, {
-    name: "BWS.Settings.LootProfile.Name",
-    hint: "BWS.Settings.LootProfile.Hint",
+    name: "SWS.Settings.LootProfile.Name",
+    hint: "SWS.Settings.LootProfile.Hint",
     scope: "world",
     config: true,
     type: String,
     choices: {
-      traveler: "BWS.Loot.Profile.traveler",
-      grimoire: "BWS.Loot.Profile.grimoire",
-      archmage: "BWS.Loot.Profile.archmage"
+      traveler: "SWS.Loot.Profile.traveler",
+      grimoire: "SWS.Loot.Profile.grimoire",
+      archmage: "SWS.Loot.Profile.archmage"
     },
     default: "grimoire"
   });
 
   game.settings.register(MODULE_ID, SETTINGS.LOOT_MAX_RARITY, {
-    name: "BWS.Settings.LootMaxRarity.Name",
-    hint: "BWS.Settings.LootMaxRarity.Hint",
+    name: "SWS.Settings.LootMaxRarity.Name",
+    hint: "SWS.Settings.LootMaxRarity.Hint",
     scope: "world",
     config: true,
     type: String,
     choices: {
-      common: "BWS.Loot.Rarity.common",
-      uncommon: "BWS.Loot.Rarity.uncommon",
-      rare: "BWS.Loot.Rarity.rare"
+      common: "SWS.Loot.Rarity.common",
+      uncommon: "SWS.Loot.Rarity.uncommon",
+      rare: "SWS.Loot.Rarity.rare"
     },
     default: "common"
   });
@@ -108,8 +108,8 @@ function registerSettings() {
   });
 
   game.settings.register(MODULE_ID, SETTINGS.TRACK_LEARNED, {
-    name: "BWS.Settings.TrackLearned.Name",
-    hint: "BWS.Settings.TrackLearned.Hint",
+    name: "SWS.Settings.TrackLearned.Name",
+    hint: "SWS.Settings.TrackLearned.Hint",
     scope: "world",
     config: true,
     type: Boolean,
@@ -117,8 +117,8 @@ function registerSettings() {
   });
 
   game.settings.register(MODULE_ID, SETTINGS.CONSUME_ON_LEARN, {
-    name: "BWS.Settings.ConsumeOnLearn.Name",
-    hint: "BWS.Settings.ConsumeOnLearn.Hint",
+    name: "SWS.Settings.ConsumeOnLearn.Name",
+    hint: "SWS.Settings.ConsumeOnLearn.Hint",
     scope: "world",
     config: true,
     type: Boolean,
@@ -150,7 +150,7 @@ function injectSceneControlButton(controls) {
   const open = () => MySpellbooksApp.open();
   const tool = {
     name: TOOL_NAME,
-    title: "BWS.ModuleTitle",
+    title: "SWS.ModuleTitle",
     icon: "fa-solid fa-book-open",
     visible: true,
     button: true,
@@ -201,13 +201,13 @@ Hooks.once("init", () => {
   };
 
   game.modules.get(MODULE_ID).api = api;
-  globalThis.BlizzardsWondrousSpellbook = api;
+  globalThis.SargasWondrousSpellbook = api;
 });
 
 Hooks.once("ready", () => {
   if (game.system.id !== "pf2e") {
     ui.notifications.error(
-      "Blizzard's Wondrous Spellbook requires the Pathfinder Second Edition system."
+      "Sargas Wondrous Spellbook requires the Pathfinder Second Edition system."
     );
     return;
   }

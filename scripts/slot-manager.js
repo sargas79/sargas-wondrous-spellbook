@@ -32,11 +32,11 @@ import {
 export function resolveTargetActor() {
   const controlled = canvas?.tokens?.controlled ?? [];
   const token = controlled.find((t) => t.actor?.isOwner);
-  if (token?.actor) return { actor: token.actor, source: game.i18n.localize("BWS.Slot.SourceToken") };
+  if (token?.actor) return { actor: token.actor, source: game.i18n.localize("SWS.Slot.SourceToken") };
 
   const assigned = game.user.character;
   if (assigned?.isOwner) {
-    return { actor: assigned, source: game.i18n.localize("BWS.Slot.SourceAssigned") };
+    return { actor: assigned, source: game.i18n.localize("SWS.Slot.SourceAssigned") };
   }
   return null;
 }
@@ -47,11 +47,11 @@ export function resolveTargetActor() {
  * @returns {string} Localised label such as "prepared" or "spontaneous".
  */
 function describeEntryKind(entry) {
-  if (entry.isPrepared) return game.i18n.localize("BWS.Slot.EntryPrepared");
-  if (entry.isSpontaneous) return game.i18n.localize("BWS.Slot.EntrySpontaneous");
-  if (entry.isInnate) return game.i18n.localize("BWS.Slot.EntryInnate");
-  if (entry.isFocusPool) return game.i18n.localize("BWS.Slot.EntryFocus");
-  if (entry.isRitual) return game.i18n.localize("BWS.Slot.EntryRitual");
+  if (entry.isPrepared) return game.i18n.localize("SWS.Slot.EntryPrepared");
+  if (entry.isSpontaneous) return game.i18n.localize("SWS.Slot.EntrySpontaneous");
+  if (entry.isInnate) return game.i18n.localize("SWS.Slot.EntryInnate");
+  if (entry.isFocusPool) return game.i18n.localize("SWS.Slot.EntryFocus");
+  if (entry.isRitual) return game.i18n.localize("SWS.Slot.EntryRitual");
   return "";
 }
 
@@ -124,7 +124,7 @@ function buildRankOptions(entry, baseRank, { isCantrip, isFocus }) {
       rank,
       label: getRankLabel(rank),
       free,
-      freeLabel: free === null ? "" : game.i18n.format("BWS.Slot.FreeCount", { count: free }),
+      freeLabel: free === null ? "" : game.i18n.format("SWS.Slot.FreeCount", { count: free }),
       // A slotted entry with no slot array at all for this rank cannot hold it.
       disabled: slotted && slots.length === 0
     };
@@ -213,7 +213,7 @@ async function attachSpell(actor, entryId, spellDoc, rank) {
       prepared = !!(await entry.update({ [`system.slots.slot${rank}.prepared`]: slots }));
     }
   } catch (err) {
-    console.warn("Blizzard's Wondrous Spellbook | Preparing the spell failed", err);
+    console.warn("Sargas Wondrous Spellbook | Preparing the spell failed", err);
   }
   return { item, prepared, full: false };
 }
@@ -229,7 +229,7 @@ async function attachSpell(actor, entryId, spellDoc, rank) {
 export async function openSendToSlotDialog({ uuid, actor } = {}) {
   const spellDoc = await resolveSpell(uuid);
   if (!spellDoc) {
-    ui.notifications.error(game.i18n.localize("BWS.Error.SpellMissing"));
+    ui.notifications.error(game.i18n.localize("SWS.Error.SpellMissing"));
     return null;
   }
 
@@ -238,7 +238,7 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
   // is a corrupt sheet, not a feature. The creator hides the arrow on ritual rows; this
   // guard covers every other way in, the module API included.
   if (isRitual(spellDoc)) {
-    ui.notifications.warn(game.i18n.format("BWS.Slot.RitualRefused", { spell: spellDoc.name }));
+    ui.notifications.warn(game.i18n.format("SWS.Slot.RitualRefused", { spell: spellDoc.name }));
     return null;
   }
 
@@ -246,7 +246,7 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
   if (!actor) {
     const target = resolveTargetActor();
     if (!target) {
-      ui.notifications.warn(game.i18n.localize("BWS.Slot.NoActor"));
+      ui.notifications.warn(game.i18n.localize("SWS.Slot.NoActor"));
       return null;
     }
     actor = target.actor;
@@ -257,7 +257,7 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
   // macro or the module API has had no such check. Fail here rather than opening a
   // dialog whose submit is guaranteed to be rejected by the server.
   if (!actor.isOwner) {
-    ui.notifications.warn(game.i18n.format("BWS.Slot.NotOwner", { actor: actor.name }));
+    ui.notifications.warn(game.i18n.format("SWS.Slot.NotOwner", { actor: actor.name }));
     return null;
   }
 
@@ -266,12 +266,12 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
   // No-entries state: explain rather than offering an empty dropdown.
   if (!entries.length) {
     await foundry.applications.api.DialogV2.prompt({
-      window: { title: game.i18n.localize("BWS.Slot.NoEntriesTitle"), icon: "fa-solid fa-book-sparkles" },
-      classes: ["bws-dialog"],
-      content: `<p class="bws-empty-note">${game.i18n.format("BWS.Slot.NoEntries", {
+      window: { title: game.i18n.localize("SWS.Slot.NoEntriesTitle"), icon: "fa-solid fa-book-sparkles" },
+      classes: ["sws-dialog"],
+      content: `<p class="sws-empty-note">${game.i18n.format("SWS.Slot.NoEntries", {
         actor: foundry.utils.escapeHTML(actor.name)
       })}</p>`,
-      ok: { label: game.i18n.localize("BWS.Slot.Cancel") },
+      ok: { label: game.i18n.localize("SWS.Slot.Cancel") },
       rejectClose: false
     });
     return null;
@@ -300,27 +300,27 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
   const content = await foundry.applications.handlebars.renderTemplate(template("send-to-slot.hbs"), {
     spell: { name: spellDoc.name, img: spellDoc.img },
     targetLine: source
-      ? game.i18n.format("BWS.Slot.TargetLine", { actor: actor.name, source })
-      : game.i18n.format("BWS.Slot.TargetLineBare", { actor: actor.name }),
+      ? game.i18n.format("SWS.Slot.TargetLine", { actor: actor.name, source })
+      : game.i18n.format("SWS.Slot.TargetLineBare", { actor: actor.name }),
     entries: entryViews,
     ranks: buildRankOptions(ordered[0], baseRank, rankFlags),
     baseRank,
     rankLocked: isCantrip || isFocus,
     // Two dialogs can be open at once; their labels must not point at each other's fields.
-    uid: `bws-slot-${foundry.utils.randomID()}`
+    uid: `sws-slot-${foundry.utils.randomID()}`
   });
 
   let result = null;
 
   try {
     await foundry.applications.api.DialogV2.wait({
-      window: { title: game.i18n.localize("BWS.Slot.Title"), icon: "fa-solid fa-arrow-down-to-line" },
-      classes: ["bws-dialog", "bws-slot-dialog"],
+      window: { title: game.i18n.localize("SWS.Slot.Title"), icon: "fa-solid fa-arrow-down-to-line" },
+      classes: ["sws-dialog", "sws-slot-dialog"],
       content,
       buttons: [
         {
           action: "send",
-          label: game.i18n.localize("BWS.Slot.Submit"),
+          label: game.i18n.localize("SWS.Slot.Submit"),
           icon: "fa-solid fa-arrow-down-to-line",
           default: true,
           callback: async (_event, _button, dialog) => {
@@ -331,7 +331,7 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
             // Every rank disabled leaves the select empty, and `Number("")` is 0: without
             // this check the spell would be sent as a cantrip.
             if (!rankSelect?.value || rankSelect.selectedOptions[0]?.disabled) {
-              ui.notifications.warn(game.i18n.format("BWS.Slot.NoRankAvailable", { entry: entry.name }));
+              ui.notifications.warn(game.i18n.format("SWS.Slot.NoRankAvailable", { entry: entry.name }));
               return;
             }
             const rank = Number(rankSelect.value);
@@ -344,7 +344,7 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
 
               if (outcome.prepared) {
                 ui.notifications.info(
-                  game.i18n.format("BWS.Slot.SuccessPrepared", {
+                  game.i18n.format("SWS.Slot.SuccessPrepared", {
                     spell: spellDoc.name,
                     entry: entry.name,
                     rank: rankLabel
@@ -354,7 +354,7 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
                 // Added to the entry, but no slot took it: either the rank was full, or
                 // PF2e refused the preparation and has already said why.
                 ui.notifications.warn(
-                  game.i18n.format(outcome.full ? "BWS.Slot.NoFreeSlot" : "BWS.Slot.NotPrepared", {
+                  game.i18n.format(outcome.full ? "SWS.Slot.NoFreeSlot" : "SWS.Slot.NotPrepared", {
                     rank: rankLabel,
                     entry: entry.name,
                     spell: spellDoc.name
@@ -362,7 +362,7 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
                 );
               } else {
                 ui.notifications.info(
-                  game.i18n.format("BWS.Slot.Success", {
+                  game.i18n.format("SWS.Slot.Success", {
                     spell: spellDoc.name,
                     entry: entry.name,
                     rank: rankLabel
@@ -370,12 +370,12 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
                 );
               }
             } catch (err) {
-              console.error("Blizzard's Wondrous Spellbook | Slot fill failed", err);
-              ui.notifications.error(game.i18n.localize("BWS.Error.SlotFailed"));
+              console.error("Sargas Wondrous Spellbook | Slot fill failed", err);
+              ui.notifications.error(game.i18n.localize("SWS.Error.SlotFailed"));
             }
           }
         },
-        { action: "cancel", label: game.i18n.localize("BWS.Slot.Cancel"), icon: "fa-solid fa-xmark" }
+        { action: "cancel", label: game.i18n.localize("SWS.Slot.Cancel"), icon: "fa-solid fa-xmark" }
       ],
       rejectClose: false,
       render: (_event, dialog) => {
@@ -406,8 +406,8 @@ export async function openSendToSlotDialog({ uuid, actor } = {}) {
       }
     });
   } catch (err) {
-    console.error("Blizzard's Wondrous Spellbook | Send to Slot dialog failed", err);
-    ui.notifications.error(game.i18n.localize("BWS.Error.SlotFailed"));
+    console.error("Sargas Wondrous Spellbook | Send to Slot dialog failed", err);
+    ui.notifications.error(game.i18n.localize("SWS.Error.SlotFailed"));
   }
 
   return result;
@@ -458,28 +458,28 @@ export function injectSheetControls(app, html) {
       (el) => el.closest("[data-item-id]") === row
     );
     const host = controls ?? row;
-    if (host.querySelector(".bws-anim-button")) continue;
+    if (host.querySelector(".sws-anim-button")) continue;
 
     // PF2e sizes the control cluster to the controls it knows about, and its own
     // buttons shrink to absorb anything extra - a spell row with several controls
     // squeezes the CAST button down to a sliver once ours is added. Tagging the
     // cluster lets the stylesheet size it to its contents instead.
-    if (controls) controls.classList.add("bws-anim-host");
+    if (controls) controls.classList.add("sws-anim-host");
 
     // Backstop for the one-shot migration at ready, which only walks world actors: a
     // synthetic token actor's spell flagged before playback moved to SVA gains its
     // recipe here. A cheap raw-flag check, and a no-op once the recipe exists. Never
     // awaited: the render must not wait on a document update.
     syncAnimationRecipe(item).catch((err) =>
-      console.warn("Blizzard's Wondrous Spellbook | Could not sync the SVA recipe", err)
+      console.warn("Sargas Wondrous Spellbook | Could not sync the SVA recipe", err)
     );
 
     const hasAnimation = !!getAnimationPath(item);
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `bws-anim-button${hasAnimation ? " is-set" : ""}`;
+    button.className = `sws-anim-button${hasAnimation ? " is-set" : ""}`;
     button.dataset.itemId = itemId;
-    button.title = game.i18n.localize("BWS.Anim.Configure");
+    button.title = game.i18n.localize("SWS.Anim.Configure");
     button.innerHTML = '<i class="fa-solid fa-gear"></i>';
     button.addEventListener("click", (event) => {
       event.preventDefault();
