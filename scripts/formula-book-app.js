@@ -49,10 +49,10 @@ export class FormulaBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** @inheritdoc */
   static DEFAULT_OPTIONS = {
-    classes: ["bws", "bws-formula-book"],
+    classes: ["sws", "sws-formula-book"],
     tag: "div",
     window: {
-      title: "BWS.Formula.ReaderTitle",
+      title: "SWS.Formula.ReaderTitle",
       icon: "fa-solid fa-hammer",
       resizable: true
     },
@@ -65,7 +65,7 @@ export class FormulaBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** @inheritdoc */
   static PARTS = {
-    body: { template: template("formula-book.hbs"), scrollable: [".bws-formula-list"] }
+    body: { template: template("formula-book.hbs"), scrollable: [".sws-formula-list"] }
   };
 
   /**
@@ -74,12 +74,12 @@ export class FormulaBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
    * @returns {string}
    */
   static idFor(journal) {
-    return `bws-formula-book-${domSafe(journal?.id)}`;
+    return `sws-formula-book-${domSafe(journal?.id)}`;
   }
 
   /** @inheritdoc */
   get title() {
-    return this.journal?.name ?? game.i18n.localize("BWS.Formula.ReaderTitle");
+    return this.journal?.name ?? game.i18n.localize("SWS.Formula.ReaderTitle");
   }
 
   /** @inheritdoc */
@@ -99,7 +99,7 @@ export class FormulaBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
       let group = groups.at(-1);
       const level = record.level ?? 0;
       if (!group || group.level !== level) {
-        group = { level, label: game.i18n.format("BWS.Formula.LevelHeading", { level }), rows: [] };
+        group = { level, label: game.i18n.format("SWS.Formula.LevelHeading", { level }), rows: [] };
         groups.push(group);
       }
       group.rows.push({
@@ -125,11 +125,11 @@ export class FormulaBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
       canTeachAll: !!this.actor && unknown > 0,
       countLine:
         records.length === 1
-          ? game.i18n.localize("BWS.Browser.FormulaSummaryOne")
-          : game.i18n.format("BWS.Browser.FormulaSummary", { count: records.length }),
+          ? game.i18n.localize("SWS.Browser.FormulaSummaryOne")
+          : game.i18n.format("SWS.Browser.FormulaSummary", { count: records.length }),
       targetLine: this.actor
-        ? game.i18n.format("BWS.Formula.TargetLine", { actor: this.actor.name })
-        : game.i18n.localize("BWS.Formula.NoTarget"),
+        ? game.i18n.format("SWS.Formula.TargetLine", { actor: this.actor.name })
+        : game.i18n.localize("SWS.Formula.NoTarget"),
       canEdit: canEditSpellbook(this.journal)
     };
   }
@@ -155,7 +155,7 @@ export class FormulaBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!added) return;
 
     ui.notifications.info(
-      game.i18n.format("BWS.Formula.Taught", {
+      game.i18n.format("SWS.Formula.Taught", {
         formula: target.dataset.name ?? uuid,
         actor: this.actor.name
       })
@@ -169,7 +169,7 @@ export class FormulaBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // Checked once up front: `addFormulaToActor` refuses a non-character too, but inside
     // the loop that would repeat the same warning for every formula in the book.
     if (!isCrafter(this.actor)) {
-      ui.notifications.warn(game.i18n.format("BWS.Formula.NotACrafter", { actor: this.actor.name }));
+      ui.notifications.warn(game.i18n.format("SWS.Formula.NotACrafter", { actor: this.actor.name }));
       return;
     }
 
@@ -178,7 +178,7 @@ export class FormulaBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
     );
     if (!missing.length) {
       ui.notifications.info(
-        game.i18n.format("BWS.Formula.NothingToTeach", { actor: this.actor.name })
+        game.i18n.format("SWS.Formula.NothingToTeach", { actor: this.actor.name })
       );
       return;
     }
@@ -191,7 +191,7 @@ export class FormulaBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     ui.notifications.info(
-      game.i18n.format("BWS.Formula.TaughtAll", { count: added, actor: this.actor.name })
+      game.i18n.format("SWS.Formula.TaughtAll", { count: added, actor: this.actor.name })
     );
     await this.render();
   }
@@ -204,7 +204,7 @@ export class FormulaBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
  */
 export function openFormulaBook(journal) {
   if (getBookKind(journal) !== BOOK_KINDS.FORMULAS) {
-    ui.notifications.warn(game.i18n.localize("BWS.Formula.NotAFormulaBook"));
+    ui.notifications.warn(game.i18n.localize("SWS.Formula.NotAFormulaBook"));
     return null;
   }
   return openOrFocus(FormulaBookApp.idFor(journal), () => new FormulaBookApp({ journal }));

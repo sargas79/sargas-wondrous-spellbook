@@ -1,51 +1,51 @@
 {{!-- A crafter's blueprints. Teaching writes into the chosen crafter's formula list and
       nothing else; the book itself is never consumed. --}}
-<div class="bws-formula-book-inner">
+<div class="sws-formula-book-inner">
 
-  <header class="bws-formula-header">
-    <div class="bws-field">
-      <label for="{{partId}}-bws-formula-crafter">{{localize "BWS.Formula.CrafterLabel"}}</label>
-      <select id="{{partId}}-bws-formula-crafter" name="crafter" {{#unless hasCrafter}}disabled{{/unless}}>
+  <header class="sws-formula-header">
+    <div class="sws-field">
+      <label for="{{partId}}-sws-formula-crafter">{{localize "SWS.Formula.CrafterLabel"}}</label>
+      <select id="{{partId}}-sws-formula-crafter" name="crafter" {{#unless hasCrafter}}disabled{{/unless}}>
         {{#each crafters}}
           <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
         {{/each}}
       </select>
     </div>
 
-    <div class="bws-formula-meta">
-      <span class="bws-formula-count">{{countLine}}</span>
-      <span class="bws-formula-target{{#unless hasCrafter}} is-warning{{/unless}}">{{targetLine}}</span>
+    <div class="sws-formula-meta">
+      <span class="sws-formula-count">{{countLine}}</span>
+      <span class="sws-formula-target{{#unless hasCrafter}} is-warning{{/unless}}">{{targetLine}}</span>
     </div>
 
-    <button type="button" class="bws-button bws-button-small" data-action="teachAll"
-            data-tooltip="{{localize 'BWS.Formula.TeachAllTooltip'}}"
+    <button type="button" class="sws-button sws-button-small" data-action="teachAll"
+            data-tooltip="{{localize 'SWS.Formula.TeachAllTooltip'}}"
             {{#unless canTeachAll}}disabled{{/unless}}>
       <i class="fa-solid fa-clipboard-list"></i>
-      {{localize "BWS.Formula.TeachAll" count=unknownCount}}
+      {{localize "SWS.Formula.TeachAll" count=unknownCount}}
     </button>
   </header>
 
-  <div class="bws-formula-list">
+  <div class="sws-formula-list">
     {{#if hasFormulas}}
       {{#each groups}}
-        <div class="bws-group-header">
-          <span class="bws-group-title">{{label}}</span>
+        <div class="sws-group-header">
+          <span class="sws-group-title">{{label}}</span>
         </div>
 
         {{#each rows}}
-          <div class="bws-spell-row bws-formula-row{{#if known}} is-known{{/if}}">
-            <span class="bws-spell-name" title="{{name}}">{{name}}</span>
-            <span class="bws-formula-price" title="{{price}}">{{price}}</span>
-            <span class="bws-spell-tags">
-              <span class="bws-pill bws-pill-rarity-{{rarity}}">{{rarityLabel}}</span>
+          <div class="sws-spell-row sws-formula-row{{#if known}} is-known{{/if}}">
+            <span class="sws-spell-name" title="{{name}}">{{name}}</span>
+            <span class="sws-formula-price" title="{{price}}">{{price}}</span>
+            <span class="sws-spell-tags">
+              <span class="sws-pill sws-pill-rarity-{{rarity}}">{{rarityLabel}}</span>
             </span>
-            <span class="bws-known-tag">
-              {{#if known}}<i class="fa-solid fa-check"></i> {{localize "BWS.Formula.Known"}}{{/if}}
+            <span class="sws-known-tag">
+              {{#if known}}<i class="fa-solid fa-check"></i> {{localize "SWS.Formula.Known"}}{{/if}}
             </span>
-            <button type="button" class="bws-icon-button bws-teach" data-action="teach"
+            <button type="button" class="sws-icon-button sws-teach" data-action="teach"
                     data-uuid="{{uuid}}" data-name="{{name}}"
-                    data-tooltip="{{localize 'BWS.Formula.Teach'}}"
-                    aria-label="{{localize 'BWS.Formula.Teach'}}"
+                    data-tooltip="{{localize 'SWS.Formula.Teach'}}"
+                    aria-label="{{localize 'SWS.Formula.Teach'}}"
                     {{#if disabled}}disabled{{/if}}>
               <i class="fa-solid fa-hammer"></i>
             </button>
@@ -53,17 +53,17 @@
         {{/each}}
       {{/each}}
     {{else}}
-      <div class="bws-empty">
+      <div class="sws-empty">
         <i class="fa-solid fa-drafting-compass"></i>
-        <p class="bws-empty-title">{{localize "BWS.Formula.EmptyBook"}}</p>
+        <p class="sws-empty-title">{{localize "SWS.Formula.EmptyBook"}}</p>
       </div>
     {{/if}}
   </div>
 
-  <footer class="bws-loot-book-footer">
-    <p class="bws-ownership-note">
+  <footer class="sws-loot-book-footer">
+    <p class="sws-ownership-note">
       <i class="fa-solid fa-hammer"></i>
-      {{localize "BWS.Formula.ReaderNote"}}
+      {{localize "SWS.Formula.ReaderNote"}}
     </p>
   </footer>
 

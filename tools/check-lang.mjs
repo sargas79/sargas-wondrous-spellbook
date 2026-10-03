@@ -31,13 +31,13 @@ for (const key of keys) {
 }
 
 // 2. Every literal key in the code must exist. Keys built at runtime from a template
-// literal (`BWS.Kind.${kind}`) are not literals and are not checked here.
+// literal (`SWS.Kind.${kind}`) are not literals and are not checked here.
 const files = SOURCES.flatMap((dir) =>
   readdirSync(dir, { recursive: true })
     .filter((name) => /\.(js|hbs)$/.test(name))
     .map((name) => join(dir, name))
 );
-const literal = /["'](BWS\.[A-Za-z0-9_.]+?)["']/g;
+const literal = /["'](SWS\.[A-Za-z0-9_.]+?)["']/g;
 for (const file of files) {
   for (const [, key] of readFileSync(file, "utf8").matchAll(literal)) {
     if (!(key in lang)) problems.push(`${file}: "${key}" is not defined in ${LANG}`);

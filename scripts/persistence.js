@@ -53,8 +53,8 @@ export async function getOrCreateSpellbooksFolder() {
 
     return await Folder.create({ name, type: "JournalEntry", color: "#6d5ce7", sorting: "a" });
   } catch (err) {
-    console.error("Blizzard's Wondrous Spellbook | Failed to resolve the spellbook folder", err);
-    ui.notifications.error(game.i18n.localize("BWS.Error.FolderFailed"));
+    console.error("Sargas Wondrous Spellbook | Failed to resolve the spellbook folder", err);
+    ui.notifications.error(game.i18n.localize("SWS.Error.FolderFailed"));
     return null;
   }
 }
@@ -124,7 +124,7 @@ function groupRecords(records, keyOf) {
  * @returns {string} HTML table grouped by rank.
  */
 export function renderSpellsPage(spells) {
-  if (!spells.length) return `<p><em>${game.i18n.localize("BWS.Creator.SelectedEmpty")}</em></p>`;
+  if (!spells.length) return `<p><em>${game.i18n.localize("SWS.Creator.SelectedEmpty")}</em></p>`;
 
   const byRank = new Map();
   for (const spell of spells) {
@@ -150,8 +150,8 @@ export function renderSpellsPage(spells) {
         })
         .join("");
       return `<h2>${getRankLabel(rank)}</h2>
-<table><thead><tr><th>${game.i18n.localize("BWS.Journal.TableSpell")}</th><th>${game.i18n.localize(
-        "BWS.Journal.TableTraditions"
+<table><thead><tr><th>${game.i18n.localize("SWS.Journal.TableSpell")}</th><th>${game.i18n.localize(
+        "SWS.Journal.TableTraditions"
       )}</th></tr></thead><tbody>${rows}</tbody></table>`;
     });
 
@@ -169,13 +169,13 @@ export function renderSpellsPage(spells) {
  * @returns {string} HTML tables grouped by rank.
  */
 export function renderRitualsPage(rituals) {
-  if (!rituals.length) return `<p><em>${game.i18n.localize("BWS.Ritual.SelectedEmpty")}</em></p>`;
+  if (!rituals.length) return `<p><em>${game.i18n.localize("SWS.Ritual.SelectedEmpty")}</em></p>`;
 
   const head = [
-    game.i18n.localize("BWS.Journal.TableRitual"),
-    game.i18n.localize("BWS.Journal.TableCastTime"),
-    game.i18n.localize("BWS.Journal.TableCost"),
-    game.i18n.localize("BWS.Journal.TableSecondary")
+    game.i18n.localize("SWS.Journal.TableRitual"),
+    game.i18n.localize("SWS.Journal.TableCastTime"),
+    game.i18n.localize("SWS.Journal.TableCost"),
+    game.i18n.localize("SWS.Journal.TableSecondary")
   ]
     .map((label) => `<th>${label}</th>`)
     .join("");
@@ -207,12 +207,12 @@ export function renderRitualsPage(rituals) {
  * @returns {string} HTML tables grouped by item level.
  */
 export function renderFormulasPage(formulas) {
-  if (!formulas.length) return `<p><em>${game.i18n.localize("BWS.Formula.SelectedEmpty")}</em></p>`;
+  if (!formulas.length) return `<p><em>${game.i18n.localize("SWS.Formula.SelectedEmpty")}</em></p>`;
 
   const head = [
-    game.i18n.localize("BWS.Journal.TableItem"),
-    game.i18n.localize("BWS.Journal.TablePrice"),
-    game.i18n.localize("BWS.Journal.TableRarity")
+    game.i18n.localize("SWS.Journal.TableItem"),
+    game.i18n.localize("SWS.Journal.TablePrice"),
+    game.i18n.localize("SWS.Journal.TableRarity")
   ]
     .map((label) => `<th>${label}</th>`)
     .join("");
@@ -229,7 +229,7 @@ export function renderFormulasPage(formulas) {
           return `<tr>${cells.map((cell) => `<td>${cell}</td>`).join("")}</tr>`;
         })
         .join("");
-      return `<h2>${game.i18n.format("BWS.Formula.LevelHeading", { level })}</h2>
+      return `<h2>${game.i18n.format("SWS.Formula.LevelHeading", { level })}</h2>
 <table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
     })
     .join("\n");
@@ -327,7 +327,7 @@ export function getBookKind(journal) {
  */
 export function getBookKindLabel(kind) {
   const key = Object.values(BOOK_KINDS).includes(kind) ? kind : BOOK_KINDS.SPELLS;
-  return game.i18n.localize(`BWS.Kind.${key}`);
+  return game.i18n.localize(`SWS.Kind.${key}`);
 }
 
 /**
@@ -355,7 +355,7 @@ export async function createSpellbook({ name, spells, kind = BOOK_KINDS.SPELLS }
   // Core only lets roles with "Create Journal Entries" do this, which by default is
   // Trusted Player and up. Without this check a Player got a bare "failed to save".
   if (!canCreateSpellbook()) {
-    ui.notifications.warn(game.i18n.localize("BWS.Error.NoJournalCreate"));
+    ui.notifications.warn(game.i18n.localize("SWS.Error.NoJournalCreate"));
     return null;
   }
   try {
@@ -371,7 +371,7 @@ export async function createSpellbook({ name, spells, kind = BOOK_KINDS.SPELLS }
       },
       pages: [
         {
-          name: game.i18n.localize(`BWS.Journal.PageTitle.${kind}`),
+          name: game.i18n.localize(`SWS.Journal.PageTitle.${kind}`),
           type: "text",
           text: {
             format: CONST.JOURNAL_ENTRY_PAGE_FORMATS.HTML,
@@ -381,8 +381,8 @@ export async function createSpellbook({ name, spells, kind = BOOK_KINDS.SPELLS }
       ]
     });
   } catch (err) {
-    console.error("Blizzard's Wondrous Spellbook | Failed to create the spellbook", err);
-    ui.notifications.error(game.i18n.localize("BWS.Error.SaveFailed"));
+    console.error("Sargas Wondrous Spellbook | Failed to create the spellbook", err);
+    ui.notifications.error(game.i18n.localize("SWS.Error.SaveFailed"));
     return null;
   }
 }
@@ -401,7 +401,7 @@ export async function createSpellbook({ name, spells, kind = BOOK_KINDS.SPELLS }
  */
 export async function updateSpellbook(journal, { name, spells }) {
   if (!canEditSpellbook(journal)) {
-    ui.notifications.warn(game.i18n.localize("BWS.Notify.NoPermission"));
+    ui.notifications.warn(game.i18n.localize("SWS.Notify.NoPermission"));
     return null;
   }
 
@@ -423,7 +423,7 @@ export async function updateSpellbook(journal, { name, spells }) {
     else {
       await journal.createEmbeddedDocuments("JournalEntryPage", [
         {
-          name: game.i18n.localize(`BWS.Journal.PageTitle.${kind}`),
+          name: game.i18n.localize(`SWS.Journal.PageTitle.${kind}`),
           type: "text",
           text: { format: CONST.JOURNAL_ENTRY_PAGE_FORMATS.HTML, content }
         }
@@ -431,8 +431,8 @@ export async function updateSpellbook(journal, { name, spells }) {
     }
     return journal;
   } catch (err) {
-    console.error("Blizzard's Wondrous Spellbook | Failed to update the spellbook", err);
-    ui.notifications.error(game.i18n.localize("BWS.Error.SaveFailed"));
+    console.error("Sargas Wondrous Spellbook | Failed to update the spellbook", err);
+    ui.notifications.error(game.i18n.localize("SWS.Error.SaveFailed"));
     return null;
   }
 }
@@ -444,17 +444,17 @@ export async function updateSpellbook(journal, { name, spells }) {
  */
 export async function deleteSpellbook(journal) {
   if (!canEditSpellbook(journal)) {
-    ui.notifications.warn(game.i18n.localize("BWS.Notify.NoPermission"));
+    ui.notifications.warn(game.i18n.localize("SWS.Notify.NoPermission"));
     return false;
   }
   try {
     const name = journal.name;
     await journal.delete();
-    ui.notifications.info(game.i18n.format("BWS.Notify.Deleted", { name }));
+    ui.notifications.info(game.i18n.format("SWS.Notify.Deleted", { name }));
     return true;
   } catch (err) {
-    console.error("Blizzard's Wondrous Spellbook | Failed to delete the spellbook", err);
-    ui.notifications.error(game.i18n.localize("BWS.Error.DeleteFailed"));
+    console.error("Sargas Wondrous Spellbook | Failed to delete the spellbook", err);
+    ui.notifications.error(game.i18n.localize("SWS.Error.DeleteFailed"));
     return false;
   }
 }
@@ -541,9 +541,9 @@ export function summariseSpellbook(journal) {
     : [...new Set(records.map((record) => record.rank))].sort((a, b) => a - b);
 
   const countKey = {
-    [BOOK_KINDS.FORMULAS]: "BWS.Browser.FormulaSummary",
-    [BOOK_KINDS.RITUALS]: "BWS.Browser.RitualSummary"
-  }[kind] ?? "BWS.Browser.SpellSummary";
+    [BOOK_KINDS.FORMULAS]: "SWS.Browser.FormulaSummary",
+    [BOOK_KINDS.RITUALS]: "SWS.Browser.RitualSummary"
+  }[kind] ?? "SWS.Browser.SpellSummary";
   return {
     id: journal.id,
     uuid: journal.uuid,

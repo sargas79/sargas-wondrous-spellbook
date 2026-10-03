@@ -285,8 +285,8 @@ export function getActionCost(spell) {
  * @returns {string}
  */
 export function getRankLabel(rank) {
-  if (rank === 0) return game.i18n.localize("BWS.Rank.Cantrips");
-  return game.i18n.format("BWS.Rank.Rank", { rank });
+  if (rank === 0) return game.i18n.localize("SWS.Rank.Cantrips");
+  return game.i18n.format("SWS.Rank.Rank", { rank });
 }
 
 /**
@@ -295,8 +295,8 @@ export function getRankLabel(rank) {
  * @returns {string}
  */
 export function getRankBadge(rank) {
-  if (rank === 0) return game.i18n.localize("BWS.Rank.CantripShort");
-  return game.i18n.format("BWS.Rank.RankShort", { rank });
+  if (rank === 0) return game.i18n.localize("SWS.Rank.CantripShort");
+  return game.i18n.format("SWS.Rank.RankShort", { rank });
 }
 
 /**
@@ -306,7 +306,7 @@ export function getRankBadge(rank) {
  */
 export function getRarityLabel(rarity) {
   const key = RARITIES.includes(rarity) ? rarity : "common";
-  return game.i18n.localize(`BWS.Loot.Rarity.${key}`);
+  return game.i18n.localize(`SWS.Loot.Rarity.${key}`);
 }
 
 /**
@@ -344,7 +344,7 @@ function normaliseSpell(spell, pack) {
     // Pre-localised for the row pills: Handlebars has no `capitalize` helper.
     traditionTags: traditions.map((key) => ({
       key,
-      label: game.i18n.localize(`BWS.Tradition.${key.charAt(0).toUpperCase()}${key.slice(1)}`)
+      label: game.i18n.localize(`SWS.Tradition.${key.charAt(0).toUpperCase()}${key.slice(1)}`)
     })),
     traits: getSpellTraits(spell),
     category: getSpellCategory(spell),
@@ -394,7 +394,7 @@ async function loadCompendiumSpells({ force = false } = {}) {
               .map((entry) => normaliseSpell(entry, pack));
           } catch (err) {
             // One unreadable pack must not sink the whole query.
-            console.warn(`Blizzard's Wondrous Spellbook | Skipped pack ${pack.collection}`, err);
+            console.warn(`Sargas Wondrous Spellbook | Skipped pack ${pack.collection}`, err);
             return [];
           }
         })
@@ -418,8 +418,8 @@ async function loadCompendiumSpells({ force = false } = {}) {
       _cache = { spells, rituals, packCount: packs.length };
       return _cache;
     } catch (err) {
-      console.error("Blizzard's Wondrous Spellbook | Spell query failed", err);
-      ui.notifications.error(game.i18n.localize("BWS.Error.QueryFailed"));
+      console.error("Sargas Wondrous Spellbook | Spell query failed", err);
+      ui.notifications.error(game.i18n.localize("SWS.Error.QueryFailed"));
       _cache = { spells: [], rituals: [], packCount: 0 };
       return _cache;
     } finally {
@@ -532,8 +532,8 @@ export async function querySpells({
       count: list.length,
       countLabel:
         list.length === 1
-          ? game.i18n.localize("BWS.Creator.SpellCountOne")
-          : game.i18n.format("BWS.Creator.SpellCount", { count: list.length }),
+          ? game.i18n.localize("SWS.Creator.SpellCountOne")
+          : game.i18n.format("SWS.Creator.SpellCount", { count: list.length }),
       spells: list.sort((a, b) => a.name.localeCompare(b.name))
     }));
 
@@ -549,7 +549,7 @@ export async function resolveSpell(uuid) {
   try {
     return await fromUuid(uuid);
   } catch (err) {
-    console.error("Blizzard's Wondrous Spellbook | Failed to resolve spell", uuid, err);
+    console.error("Sargas Wondrous Spellbook | Failed to resolve spell", uuid, err);
     return null;
   }
 }

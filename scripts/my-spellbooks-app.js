@@ -42,11 +42,11 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** @inheritdoc */
   static DEFAULT_OPTIONS = {
-    id: "bws-my-spellbooks",
-    classes: ["bws", "bws-browser"],
+    id: "sws-my-spellbooks",
+    classes: ["sws", "sws-browser"],
     tag: "div",
     window: {
-      title: "BWS.Browser.Title",
+      title: "SWS.Browser.Title",
       icon: "fa-solid fa-book-bookmark",
       resizable: true
     },
@@ -63,7 +63,7 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** @inheritdoc */
   static PARTS = {
-    body: { template: template("my-spellbooks.hbs"), scrollable: [".bws-book-list"] }
+    body: { template: template("my-spellbooks.hbs"), scrollable: [".sws-book-list"] }
   };
 
   /** @inheritdoc */
@@ -73,16 +73,16 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const journals = getUserSpellbooks().map((journal) => ({
       ...summariseSpellbook(journal),
       kind: "journal",
-      openHint: game.i18n.localize("BWS.Browser.Open"),
-      editHint: game.i18n.localize("BWS.Browser.Edit"),
-      deleteHint: game.i18n.localize("BWS.Browser.Delete")
+      openHint: game.i18n.localize("SWS.Browser.Open"),
+      editHint: game.i18n.localize("SWS.Browser.Edit"),
+      deleteHint: game.i18n.localize("SWS.Browser.Delete")
     }));
     const loot = getUserLootBooks().map((item) => ({
       ...summariseLootBook(item),
       kind: "loot",
-      openHint: game.i18n.localize("BWS.Loot.OpenBook"),
-      editHint: game.i18n.localize("BWS.Browser.OpenItem"),
-      deleteHint: game.i18n.localize("BWS.Browser.DeleteLoot")
+      openHint: game.i18n.localize("SWS.Loot.OpenBook"),
+      editHint: game.i18n.localize("SWS.Browser.OpenItem"),
+      deleteHint: game.i18n.localize("SWS.Browser.DeleteLoot")
     }));
     // One alphabetical list rather than two blocks: the loot tag on a row is what tells
     // the two kinds apart, so grouping by kind would only cost the reader the ordering.
@@ -94,10 +94,10 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
       hasBooks: books.length > 0,
       // Rolling loot writes a world Item, which only a GM may do.
       isGM: game.user.isGM,
-      folderLine: game.i18n.format("BWS.Browser.FolderLine", { folder: getFolderName() }),
+      folderLine: game.i18n.format("SWS.Browser.FolderLine", { folder: getFolderName() }),
       scopeLine: game.user.isGM
-        ? game.i18n.format("BWS.Browser.GMSeesAll", { count: books.length })
-        : game.i18n.format("BWS.Browser.OwnedCount", { count: books.length })
+        ? game.i18n.format("SWS.Browser.GMSeesAll", { count: books.length })
+        : game.i18n.format("SWS.Browser.OwnedCount", { count: books.length })
     };
   }
 
@@ -165,10 +165,10 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!doc) return;
 
     const confirmed = await foundry.applications.api.DialogV2.confirm({
-      window: { title: game.i18n.localize("BWS.Browser.DeleteTitle"), icon: "fa-solid fa-trash" },
-      classes: ["bws-dialog"],
+      window: { title: game.i18n.localize("SWS.Browser.DeleteTitle"), icon: "fa-solid fa-trash" },
+      classes: ["sws-dialog"],
       content: `<p>${game.i18n.format(
-        isLoot ? "BWS.Browser.DeleteLootConfirm" : "BWS.Browser.DeleteConfirm",
+        isLoot ? "SWS.Browser.DeleteLootConfirm" : "SWS.Browser.DeleteConfirm",
         { name: foundry.utils.escapeHTML(doc.name) }
       )}</p>`,
       rejectClose: false,
@@ -179,10 +179,10 @@ export class MySpellbooksApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (isLoot) {
       try {
         await doc.delete();
-        ui.notifications.info(game.i18n.format("BWS.Notify.Deleted", { name: doc.name }));
+        ui.notifications.info(game.i18n.format("SWS.Notify.Deleted", { name: doc.name }));
       } catch (err) {
-        console.error("Blizzard's Wondrous Spellbook | Failed to delete the loot spellbook", err);
-        ui.notifications.error(game.i18n.localize("BWS.Error.DeleteFailed"));
+        console.error("Sargas Wondrous Spellbook | Failed to delete the loot spellbook", err);
+        ui.notifications.error(game.i18n.localize("SWS.Error.DeleteFailed"));
       }
     } else await deleteSpellbook(doc);
 

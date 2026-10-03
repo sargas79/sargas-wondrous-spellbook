@@ -115,7 +115,7 @@ export function normaliseFormula(item) {
     name: item.name,
     img: item.img,
     level,
-    levelLabel: game.i18n.format("BWS.Formula.LevelHeading", { level }),
+    levelLabel: game.i18n.format("SWS.Formula.LevelHeading", { level }),
     price: getItemPrice(item),
     rarity,
     itemType: String(item.type ?? ""),
@@ -155,7 +155,7 @@ export async function resolveFormula(uuid) {
     const item = await fromUuid(uuid);
     return item ? normaliseFormula(item) : null;
   } catch (err) {
-    console.warn("Blizzard's Wondrous Spellbook | Failed to resolve formula", uuid, err);
+    console.warn("Sargas Wondrous Spellbook | Failed to resolve formula", uuid, err);
     return null;
   }
 }
@@ -194,7 +194,7 @@ export async function collectActorFormulas(actor) {
         // across the list because the records are sorted by it.
         id: `level-${record.level}`,
         level: record.level,
-        name: game.i18n.format("BWS.Formula.LevelHeading", { level: record.level }),
+        name: game.i18n.format("SWS.Formula.LevelHeading", { level: record.level }),
         kind: "",
         formulas: []
       };
@@ -219,14 +219,14 @@ export async function collectActorFormulas(actor) {
  */
 export async function addFormulaToActor(actor, uuid) {
   if (!actor?.isOwner) {
-    ui.notifications.warn(game.i18n.format("BWS.Slot.NotOwner", { actor: actor?.name ?? "" }));
+    ui.notifications.warn(game.i18n.format("SWS.Slot.NotOwner", { actor: actor?.name ?? "" }));
     return false;
   }
   // Only a PF2e character has a formula list. An update to any other actor type - the
   // world's Party actor, an NPC - resolves happily with the unknown key discarded, which
   // would report a formula as added when nothing was stored.
   if (!isCrafter(actor)) {
-    ui.notifications.warn(game.i18n.format("BWS.Formula.NotACrafter", { actor: actor.name }));
+    ui.notifications.warn(game.i18n.format("SWS.Formula.NotACrafter", { actor: actor.name }));
     return false;
   }
   if (actorKnowsFormula(actor, uuid)) return false;
@@ -236,8 +236,8 @@ export async function addFormulaToActor(actor, uuid) {
     await actor.update({ "system.crafting.formulas": [...existing, { uuid }] });
     return true;
   } catch (err) {
-    console.error("Blizzard's Wondrous Spellbook | Failed to add a formula", uuid, err);
-    ui.notifications.error(game.i18n.localize("BWS.Error.FormulaAddFailed"));
+    console.error("Sargas Wondrous Spellbook | Failed to add a formula", uuid, err);
+    ui.notifications.error(game.i18n.localize("SWS.Error.FormulaAddFailed"));
     return false;
   }
 }

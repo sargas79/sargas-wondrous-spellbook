@@ -2,63 +2,63 @@
       books. GMs see every book; players see their own. Each row carries its `kind` so the
       handlers know which document collection to look in, and a journal row also carries
       `bookKind` for what it holds. --}}
-<div class="bws-browser-inner">
+<div class="sws-browser-inner">
 
-  <header class="bws-browser-header">
-    <span class="bws-browser-scope">
-      {{folderLine}} <span class="bws-dot">&middot;</span> {{scopeLine}}
+  <header class="sws-browser-header">
+    <span class="sws-browser-scope">
+      {{folderLine}} <span class="sws-dot">&middot;</span> {{scopeLine}}
     </span>
-    <span class="bws-browser-actions">
+    <span class="sws-browser-actions">
       {{#if isGM}}
-        <button type="button" class="bws-button bws-button-small" data-action="rollLoot"
-                data-tooltip="{{localize 'BWS.Loot.RollTooltip'}}">
-          <i class="fa-solid fa-dice-d20"></i> {{localize "BWS.Loot.RollButton"}}
+        <button type="button" class="sws-button sws-button-small" data-action="rollLoot"
+                data-tooltip="{{localize 'SWS.Loot.RollTooltip'}}">
+          <i class="fa-solid fa-dice-d20"></i> {{localize "SWS.Loot.RollButton"}}
         </button>
       {{/if}}
-      <button type="button" class="bws-button bws-button-small" data-action="importSheet"
-              data-tooltip="{{localize 'BWS.Import.ButtonTooltip'}}">
-        <i class="fa-solid fa-file-import"></i> {{localize "BWS.Import.Button"}}
+      <button type="button" class="sws-button sws-button-small" data-action="importSheet"
+              data-tooltip="{{localize 'SWS.Import.ButtonTooltip'}}">
+        <i class="fa-solid fa-file-import"></i> {{localize "SWS.Import.Button"}}
       </button>
-      <button type="button" class="bws-button bws-button-primary bws-button-small" data-action="create">
-        <i class="fa-solid fa-plus"></i> {{localize "BWS.Browser.New"}}
+      <button type="button" class="sws-button sws-button-primary sws-button-small" data-action="create">
+        <i class="fa-solid fa-plus"></i> {{localize "SWS.Browser.New"}}
       </button>
     </span>
   </header>
 
-  <div class="bws-book-list">
+  <div class="sws-book-list">
     {{#if hasBooks}}
       {{#each books}}
-        <div class="bws-book-row">
-          <div class="bws-book-main">
-            <span class="bws-book-name" title="{{name}}">
+        <div class="sws-book-row">
+          <div class="sws-book-main">
+            <span class="sws-book-name" title="{{name}}">
               {{!-- Journal rows only: a loot book is tagged by the dice pill below. --}}
               {{#if kindIcon}}
-                <i class="{{kindIcon}} bws-book-kind-icon" data-tooltip="{{kindLabel}}"></i>
+                <i class="{{kindIcon}} sws-book-kind-icon" data-tooltip="{{kindLabel}}"></i>
               {{/if}}
               {{name}}
             </span>
-            <span class="bws-book-meta">
+            <span class="sws-book-meta">
               {{countLabel}}
               {{#if lootLabel}}
-                <span class="bws-loot-tag">
+                <span class="sws-loot-tag">
                   <i class="fa-solid fa-dice-d20"></i> {{lootLabel}}
                 </span>
               {{/if}}
               {{#unless canEdit}}
-                <span class="bws-readonly-tag">
-                  <i class="fa-solid fa-lock"></i> {{localize "BWS.Browser.ReadOnly"}}
+                <span class="sws-readonly-tag">
+                  <i class="fa-solid fa-lock"></i> {{localize "SWS.Browser.ReadOnly"}}
                 </span>
               {{/unless}}
             </span>
             {{#if ranks.length}}
-              <span class="bws-book-ranks">
-                {{#each ranks}}<span class="bws-rank-badge">{{badge}}</span>{{/each}}
+              <span class="sws-book-ranks">
+                {{#each ranks}}<span class="sws-rank-badge">{{badge}}</span>{{/each}}
               </span>
             {{/if}}
           </div>
 
-          <div class="bws-book-controls">
-            <button type="button" class="bws-icon-button" data-action="open" data-id="{{id}}" data-kind="{{kind}}"
+          <div class="sws-book-controls">
+            <button type="button" class="sws-icon-button" data-action="open" data-id="{{id}}" data-kind="{{kind}}"
                     data-tooltip="{{openHint}}" aria-label="{{openHint}}">
               <i class="fa-solid fa-book-open"></i>
             </button>
@@ -66,19 +66,19 @@
                   reader, and stays enabled for a book you only have read access to,
                   because teaching writes to the crafter rather than to the book. --}}
             {{#if isFormulas}}
-              <button type="button" class="bws-icon-button" data-action="edit" data-id="{{id}}" data-kind="{{kind}}"
-                      data-tooltip="{{localize 'BWS.Formula.OpenBook'}}"
-                      aria-label="{{localize 'BWS.Formula.OpenBook'}}">
+              <button type="button" class="sws-icon-button" data-action="edit" data-id="{{id}}" data-kind="{{kind}}"
+                      data-tooltip="{{localize 'SWS.Formula.OpenBook'}}"
+                      aria-label="{{localize 'SWS.Formula.OpenBook'}}">
                 <i class="fa-solid fa-hammer"></i>
               </button>
             {{else}}
-              <button type="button" class="bws-icon-button" data-action="edit" data-id="{{id}}" data-kind="{{kind}}"
+              <button type="button" class="sws-icon-button" data-action="edit" data-id="{{id}}" data-kind="{{kind}}"
                       data-tooltip="{{editHint}}" aria-label="{{editHint}}"
                       {{#unless canEdit}}disabled{{/unless}}>
                 <i class="fa-solid fa-pen-to-square"></i>
               </button>
             {{/if}}
-            <button type="button" class="bws-icon-button bws-icon-danger" data-action="remove" data-id="{{id}}" data-kind="{{kind}}"
+            <button type="button" class="sws-icon-button sws-icon-danger" data-action="remove" data-id="{{id}}" data-kind="{{kind}}"
                     data-tooltip="{{deleteHint}}" aria-label="{{deleteHint}}"
                     {{#unless canEdit}}disabled{{/unless}}>
               <i class="fa-solid fa-trash"></i>
@@ -87,12 +87,12 @@
         </div>
       {{/each}}
     {{else}}
-      <div class="bws-empty">
+      <div class="sws-empty">
         <i class="fa-solid fa-book-sparkles"></i>
-        <p class="bws-empty-title">{{localize "BWS.Browser.Empty"}}</p>
-        <p class="bws-empty-hint">{{localize "BWS.Browser.EmptyHint"}}</p>
-        <button type="button" class="bws-button bws-button-primary" data-action="create">
-          <i class="fa-solid fa-plus"></i> {{localize "BWS.Browser.EmptyAction"}}
+        <p class="sws-empty-title">{{localize "SWS.Browser.Empty"}}</p>
+        <p class="sws-empty-hint">{{localize "SWS.Browser.EmptyHint"}}</p>
+        <button type="button" class="sws-button sws-button-primary" data-action="create">
+          <i class="fa-solid fa-plus"></i> {{localize "SWS.Browser.EmptyAction"}}
         </button>
       </div>
     {{/if}}

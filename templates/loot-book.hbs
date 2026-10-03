@@ -1,36 +1,36 @@
 {{!-- Player-facing reader. Storage only: Learn hands off to the Send to Slot dialog. --}}
-<div class="bws-loot-book-inner">
+<div class="sws-loot-book-inner">
 
-  <header class="bws-loot-book-header">
-    {{#if img}}<img class="bws-loot-book-art" src="{{img}}" alt="" />{{/if}}
-    <div class="bws-loot-book-meta">
-      <span class="bws-loot-book-line">{{metaLine}}</span>
-      <span class="bws-loot-book-target{{#unless hasTarget}} is-warning{{/unless}}">{{targetLine}}</span>
-      {{#if seedLine}}<span class="bws-loot-book-seed">{{seedLine}}</span>{{/if}}
+  <header class="sws-loot-book-header">
+    {{#if img}}<img class="sws-loot-book-art" src="{{img}}" alt="" />{{/if}}
+    <div class="sws-loot-book-meta">
+      <span class="sws-loot-book-line">{{metaLine}}</span>
+      <span class="sws-loot-book-target{{#unless hasTarget}} is-warning{{/unless}}">{{targetLine}}</span>
+      {{#if seedLine}}<span class="sws-loot-book-seed">{{seedLine}}</span>{{/if}}
     </div>
   </header>
 
-  <div class="bws-loot-spells">
+  <div class="sws-loot-spells">
     {{#if hasSpells}}
       {{#each groups}}
-        <div class="bws-group-header">
-          <span class="bws-group-title">{{label}}</span>
+        <div class="sws-group-header">
+          <span class="sws-group-title">{{label}}</span>
         </div>
         {{#each spells}}
-          <div class="bws-spell-row{{#if alreadyLearned}} is-learned{{/if}}">
-            <span class="bws-rank-badge">{{rankBadge}}</span>
-            <span class="bws-spell-name" title="{{name}}">{{name}}</span>
+          <div class="sws-spell-row{{#if alreadyLearned}} is-learned{{/if}}">
+            <span class="sws-rank-badge">{{rankBadge}}</span>
+            <span class="sws-spell-name" title="{{name}}">{{name}}</span>
             {{!-- Always rendered, empty tag included, so the grid columns line up
                   whether or not anyone has learned the spell yet. --}}
-            <span class="bws-spell-tags">
-              {{#if rarityLabel}}<span class="bws-pill bws-pill-rarity-{{rarity}}">{{rarityLabel}}</span>{{/if}}
+            <span class="sws-spell-tags">
+              {{#if rarityLabel}}<span class="sws-pill sws-pill-rarity-{{rarity}}">{{rarityLabel}}</span>{{/if}}
             </span>
-            <span class="bws-learned-tag" title="{{learnedBy}}">
+            <span class="sws-learned-tag" title="{{learnedBy}}">
               {{#if learnedBy}}<i class="fa-solid fa-check"></i> {{learnedBy}}{{/if}}
             </span>
-            <button type="button" class="bws-icon-button bws-learn" data-action="learn" data-uuid="{{uuid}}"
-                    data-tooltip="{{localize 'BWS.Loot.Learn'}}"
-                    aria-label="{{localize 'BWS.Loot.Learn'}}"
+            <button type="button" class="sws-icon-button sws-learn" data-action="learn" data-uuid="{{uuid}}"
+                    data-tooltip="{{localize 'SWS.Loot.Learn'}}"
+                    aria-label="{{localize 'SWS.Loot.Learn'}}"
                     {{#if disabled}}disabled{{/if}}>
               <i class="fa-solid fa-graduation-cap"></i>
             </button>
@@ -38,17 +38,17 @@
         {{/each}}
       {{/each}}
     {{else}}
-      <div class="bws-empty">
+      <div class="sws-empty">
         <i class="fa-solid fa-book-skull"></i>
-        <p class="bws-empty-title">{{localize "BWS.Loot.EmptyBook"}}</p>
+        <p class="sws-empty-title">{{localize "SWS.Loot.EmptyBook"}}</p>
       </div>
     {{/if}}
   </div>
 
-  <footer class="bws-loot-book-footer">
-    <p class="bws-ownership-note">
+  <footer class="sws-loot-book-footer">
+    <p class="sws-ownership-note">
       <i class="fa-solid fa-wand-magic-sparkles"></i>
-      {{localize "BWS.Loot.ReaderNote"}}
+      {{localize "SWS.Loot.ReaderNote"}}
     </p>
   </footer>
 

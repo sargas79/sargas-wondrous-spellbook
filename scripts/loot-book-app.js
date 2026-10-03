@@ -63,10 +63,10 @@ export class LootBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** @inheritdoc */
   static DEFAULT_OPTIONS = {
-    classes: ["bws", "bws-loot-book"],
+    classes: ["sws", "sws-loot-book"],
     tag: "div",
     window: {
-      title: "BWS.Loot.ReaderTitle",
+      title: "SWS.Loot.ReaderTitle",
       icon: "fa-solid fa-book-sparkles",
       resizable: true
     },
@@ -78,7 +78,7 @@ export class LootBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** @inheritdoc */
   static PARTS = {
-    body: { template: template("loot-book.hbs"), scrollable: [".bws-loot-spells"] }
+    body: { template: template("loot-book.hbs"), scrollable: [".sws-loot-spells"] }
   };
 
   /**
@@ -87,12 +87,12 @@ export class LootBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
    * @returns {string}
    */
   static idFor(item) {
-    return `bws-loot-book-${domSafe(item?.uuid)}`;
+    return `sws-loot-book-${domSafe(item?.uuid)}`;
   }
 
   /** @inheritdoc */
   get title() {
-    return this.item?.name ?? game.i18n.localize("BWS.Loot.ReaderTitle");
+    return this.item?.name ?? game.i18n.localize("SWS.Loot.ReaderTitle");
   }
 
   /** @inheritdoc */
@@ -129,7 +129,7 @@ export class LootBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
         rankBadge: getRankBadge(spell.rank),
         // Older books carry no rarity; those rows just render without the pill.
         rarityLabel: spell.rarity ? getRarityLabel(spell.rarity) : "",
-        learnedBy: names.length ? game.i18n.format("BWS.Loot.LearnedBy", { actors: names.join(", ") }) : "",
+        learnedBy: names.length ? game.i18n.format("SWS.Loot.LearnedBy", { actors: names.join(", ") }) : "",
         alreadyLearned,
         // Consumption is per-actor: the page is spent for whoever copied it, not for
         // the next reader.
@@ -144,18 +144,18 @@ export class LootBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
       hasSpells: groups.length > 0,
       meta,
       metaLine: meta.level
-        ? game.i18n.format("BWS.Loot.MetaLine", {
+        ? game.i18n.format("SWS.Loot.MetaLine", {
             level: meta.level,
-            tradition: game.i18n.localize(`BWS.Loot.Tradition.${meta.tradition}`),
-            profile: game.i18n.localize(`BWS.Loot.Profile.${meta.profile}`)
+            tradition: game.i18n.localize(`SWS.Loot.Tradition.${meta.tradition}`),
+            profile: game.i18n.localize(`SWS.Loot.Profile.${meta.profile}`)
           })
         : "",
       seedLine: meta.seed
-        ? game.i18n.format(meta.edited ? "BWS.Loot.SeedEdited" : "BWS.Loot.SeedLine", { seed: meta.seed })
+        ? game.i18n.format(meta.edited ? "SWS.Loot.SeedEdited" : "SWS.Loot.SeedLine", { seed: meta.seed })
         : "",
       targetLine: target
-        ? game.i18n.format("BWS.Loot.TargetLine", { actor: target.actor.name })
-        : game.i18n.localize("BWS.Loot.NoTarget"),
+        ? game.i18n.format("SWS.Loot.TargetLine", { actor: target.actor.name })
+        : game.i18n.localize("SWS.Loot.NoTarget"),
       hasTarget: !!target
     };
   }
@@ -172,7 +172,7 @@ export class LootBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
   #resolveActor() {
     const parent = this.item?.parent;
     if (parent?.documentName === "Actor" && parent.isOwner && parent.type !== "loot") {
-      return { actor: parent, source: game.i18n.localize("BWS.Loot.SourceCarrier") };
+      return { actor: parent, source: game.i18n.localize("SWS.Loot.SourceCarrier") };
     }
     return resolveTargetActor();
   }
@@ -184,7 +184,7 @@ export class LootBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const resolved = this.#resolveActor();
     if (!resolved) {
-      ui.notifications.warn(game.i18n.localize("BWS.Slot.NoActor"));
+      ui.notifications.warn(game.i18n.localize("SWS.Slot.NoActor"));
       return;
     }
 
@@ -218,7 +218,7 @@ export class LootBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
       // into the stored one anyway, and this cannot clobber another reader's entry.
       await this.item.update({ [`flags.${MODULE_ID}.${LOOT_FLAG}.learned.${key}`]: [...actors] });
     } catch (err) {
-      console.warn("Blizzard's Wondrous Spellbook | Failed to record a learned spell", err);
+      console.warn("Sargas Wondrous Spellbook | Failed to record a learned spell", err);
     }
   }
 }
@@ -230,7 +230,7 @@ export class LootBookApp extends HandlebarsApplicationMixin(ApplicationV2) {
  */
 export function openLootBook(item) {
   if (!isLootSpellbook(item)) {
-    ui.notifications.warn(game.i18n.localize("BWS.Loot.NotALootBook"));
+    ui.notifications.warn(game.i18n.localize("SWS.Loot.NotALootBook"));
     return null;
   }
   return openOrFocus(LootBookApp.idFor(item), () => new LootBookApp({ item }));
@@ -255,10 +255,10 @@ export function injectLootBookButton(app, html) {
 
 /** Shared description of the item sheet's "open spellbook" control. */
 const OPEN_CONTROL = Object.freeze({
-  cssClass: "bws-open-loot-book",
+  cssClass: "sws-open-loot-book",
   icon: "fa-solid fa-book-sparkles",
-  label: "BWS.Loot.OpenBookShort",
-  tooltip: "BWS.Loot.OpenBook"
+  label: "SWS.Loot.OpenBookShort",
+  tooltip: "SWS.Loot.OpenBook"
 });
 
 /**
@@ -294,7 +294,7 @@ export function addLootBookHeaderButton(app, buttons) {
 export function registerLootBookContextMenu() {
   const itemFor = (li) => game.items.get(li?.dataset?.entryId);
   const entry = {
-    label: "BWS.Loot.OpenBook",
+    label: "SWS.Loot.OpenBook",
     icon: "fa-solid fa-book-sparkles",
     visible: (li) => isLootSpellbook(itemFor(li)),
     onClick: (_event, li) => openLootBook(itemFor(li))
