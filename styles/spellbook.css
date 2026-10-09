@@ -1084,6 +1084,18 @@ button.sws-anim-button:focus-visible {
   flex: 0 0 auto !important;
 }
 
+/*
+ * Growing the cluster is not enough on its own: PF2e lays each spell row out as a grid
+ * whose last track is a fixed `--controls-width` (3rem - room for edit and delete, no
+ * more). The wider cluster overflows that track to the left, since it is end-aligned,
+ * and sits on top of the CAST button. Widen the track by the gear's width. It is set on
+ * every row of the list, header included, so the Defense and Range columns stay lined
+ * up between rows that carry the gear and rows that do not.
+ */
+ol.spell-list:has(.sws-anim-button) > li {
+  --controls-width: calc(3rem + 1.5rem);
+}
+
 button.sws-anim-button > i {
   margin: 0 !important;
   line-height: 1;

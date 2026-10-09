@@ -460,10 +460,9 @@ export function injectSheetControls(app, html) {
     const host = controls ?? row;
     if (host.querySelector(".sws-anim-button")) continue;
 
-    // PF2e sizes the control cluster to the controls it knows about, and its own
-    // buttons shrink to absorb anything extra - a spell row with several controls
-    // squeezes the CAST button down to a sliver once ours is added. Tagging the
-    // cluster lets the stylesheet size it to its contents instead.
+    // PF2e sizes the control cluster, and the row's grid track holding it, to the
+    // controls it knows about - with ours added the cluster overflows onto the CAST
+    // button. Tagging the cluster lets the stylesheet size it, and its track, to fit.
     if (controls) controls.classList.add("sws-anim-host");
 
     // Backstop for the one-shot migration at ready, which only walks world actors: a
